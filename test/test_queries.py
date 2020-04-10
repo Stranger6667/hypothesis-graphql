@@ -1,4 +1,5 @@
 import graphql
+import pytest
 from hypothesis import given
 
 import hypothesis_graphql.strategies as gql_st
@@ -26,3 +27,11 @@ def test_query():
         graphql.parse(query)
 
     test()
+
+
+def test_missing_query():
+    schema = """type Author {
+      name: String
+    }"""
+    with pytest.raises(ValueError, match="Query type is not defined in the schema"):
+        gql_st.query(schema)
