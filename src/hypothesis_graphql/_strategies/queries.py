@@ -8,7 +8,7 @@ from hypothesis import strategies as st
 def query(schema: str) -> st.SearchStrategy:
     parsed_schema = graphql.build_schema(schema)
     if parsed_schema.query_type is None:
-        raise ValueError
+        raise ValueError("Query type is not defined in the schema")
     return get_strategy_for_type(parsed_schema.query_type).map(make_query).map(graphql.print_ast)
 
 
