@@ -19,6 +19,11 @@ repos:
     hooks:
       - id: gitlint
 
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.21.0
+    hooks:
+      - id: yamllint
+
   - repo: https://github.com/PyCQA/pydocstyle
     rev: 5.0.2
     hooks:
