@@ -26,7 +26,7 @@ def handle_field(field: graphql.GraphQLField) -> st.SearchStrategy:
         return st.none()
     if isinstance(type_, graphql.GraphQLList):
         type_ = type_.of_type
-    # TODO. handle other types, e.g. GraphQLScalarType
+    # TODO. handle other types, e.g. GraphQLEnumType
     return get_strategy_for_type(type_)  # type: ignore
 
 
