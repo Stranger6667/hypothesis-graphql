@@ -1,5 +1,6 @@
 """Strategies for GraphQL queries."""
-from typing import Dict, List, Optional
+from functools import partial
+from typing import List, Tuple
 
 import graphql
 from hypothesis import strategies as st
@@ -9,48 +10,53 @@ def query(schema: str) -> st.SearchStrategy:
     parsed_schema = graphql.build_schema(schema)
     if parsed_schema.query_type is None:
         raise ValueError("Query type is not defined in the schema")
-    return get_strategy_for_type(parsed_schema.query_type).map(make_query).map(graphql.print_ast)
+    return fields(parsed_schema.query_type).map(make_query).map(graphql.print_ast)
 
 
-def get_strategy_for_type(object_type: graphql.GraphQLObjectType) -> st.SearchStrategy:
+def fields(object_type: graphql.GraphQLObjectType) -> st.SearchStrategy:
+    """Generate a subset of fields defined on the given type."""
     # minimum 1 field, an empty query is not valid
-    fields = list(object_type.fields.items())
-    return st.lists(st.sampled_from(fields), min_size=1, unique_by=lambda x: x[0]).flatmap(
-        lambda items: st.fixed_dictionaries({name: handle_field(field) for name, field in items})
-    )
+    field_pairs = tuple(object_type.fields.items())
+    # pairs are unique by field name
+    return st.lists(st.sampled_from(field_pairs), min_size=1, unique_by=lambda x: x[0]).flatmap(list_of_field_nodes)
 
 
-def handle_field(field: graphql.GraphQLField) -> st.SearchStrategy:
-    type_ = field.type
-    if isinstance(type_, graphql.GraphQLScalarType):
-        return st.none()
-    if isinstance(type_, graphql.GraphQLList):
-        type_ = type_.of_type
-    # TODO. handle other types, e.g. GraphQLEnumType
-    return get_strategy_for_type(type_)  # type: ignore
+make_selection_set_node = partial(graphql.SelectionSetNode, kind="selection_set")
 
 
-def make_query(tree: Dict[str, Optional[Dict]]) -> graphql.DocumentNode:
-    # TODO. build it on the way, without traversing the tree again
+def make_query(selections: List[graphql.FieldNode]) -> graphql.DocumentNode:
+    """Create top-level node for a query AST."""
     return graphql.DocumentNode(  # type: ignore
         kind="document",
         definitions=[
             graphql.OperationDefinitionNode(
                 kind="operation_definition",
                 operation=graphql.OperationType.QUERY,
-                selection_set=graphql.SelectionSetNode(kind="selection_set", selections=build_tree(tree)),
+                selection_set=make_selection_set_node(selections=selections),
             )
         ],
     )
 
 
-def build_tree(tree: Dict[str, Optional[Dict]]) -> List[graphql.FieldNode]:
-    return [
-        graphql.FieldNode(  # type: ignore
-            name=graphql.NameNode(value=name),
-            selection_set=graphql.SelectionSetNode(kind="selection_set", selections=build_tree(value))
-            if value
-            else None,
-        )
-        for name, value in tree.items()
-    ]
+def list_of_field_nodes(items: List[Tuple[str, graphql.GraphQLField]]) -> st.SearchStrategy:
+    """Generate a list of `graphql.FieldNode`."""
+    return st.tuples(*(field_nodes(name, field) for name, field in items)).map(list)
+
+
+def field_nodes(name: str, field: graphql.GraphQLField) -> st.SearchStrategy:
+    """Generate a single field node with optional children."""
+    return st.builds(
+        partial(graphql.FieldNode, name=graphql.NameNode(value=name)),  # type: ignore
+        selection_set=st.builds(make_selection_set_node, selections=fields_for_type(field)),
+    )
+
+
+def fields_for_type(field: graphql.GraphQLField) -> st.SearchStrategy:
+    """Extract proper type from the field and generate field nodes for this type."""
+    type_ = field.type
+    if isinstance(type_, graphql.GraphQLScalarType):
+        return st.none()
+    if isinstance(type_, graphql.GraphQLList):
+        type_ = type_.of_type
+    # TODO. handle other types, e.g. GraphQLEnumType
+    return fields(type_)  # type: ignore

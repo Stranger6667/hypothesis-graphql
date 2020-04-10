@@ -14,19 +14,28 @@ type Author {
   name: String
   books: [Book]
 }
-
-type Query {
-  getBooks: [Book]
-  getAuthors: [Author]
-}"""
+"""
 
 
-def test_query():
-    @given(query=gql_st.query(SCHEMA))
+def assert_schema(schema):
+    @given(query=gql_st.query(schema))
     def test(query):
         graphql.parse(query)
 
     test()
+
+
+@pytest.mark.parametrize(
+    "query",
+    (
+        """type Query {
+      getBooks: [Book]
+      getAuthors: [Author]
+    }""",
+    ),
+)
+def test_query(query):
+    assert_schema(SCHEMA + query)
 
 
 def test_missing_query():
