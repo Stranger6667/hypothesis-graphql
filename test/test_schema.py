@@ -1,6 +1,6 @@
 import graphql
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 
 import hypothesis_graphql._strategies.schema as gql_st
 
@@ -14,6 +14,7 @@ import hypothesis_graphql._strategies.schema as gql_st
 )
 def test_generation(strategy, node_type):
     @given(item=strategy)
+    @settings(max_examples=10)
     def test(item):
         parsed = graphql.parse(item)
         assert isinstance(parsed.definitions[0], node_type)
