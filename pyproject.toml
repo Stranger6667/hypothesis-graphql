@@ -18,6 +18,8 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 authors = ["Dmitry Dygalo <dadygalo@gmail.com>"]
+readme = "README.rst"
+repository = "https://github.com/Stranger6667/hypothesis-graphql"
 license = "MIT"
 
 [tool.poetry.dependencies]
