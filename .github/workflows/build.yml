@@ -1,0 +1,101 @@
+name: Build jobs
+
+on:
+  pull_request:
+    paths:
+      - '**.py'
+      - '.github/workflows/*.yml'
+      - '.pylintrc'
+      - '.pre-commit-config.yaml'
+      - '.pydocstyle'
+      - '.relint.yml'
+      - '.yamllint'
+      - 'poetry.lock'
+      - 'pyproject.toml'
+      - 'tox.ini'
+      - 'mypy.ini'
+  push:
+    branches:
+      - master
+
+jobs:
+  pre-commit:
+    name: Generic pre-commit checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+
+      - run: pip install pre-commit
+      - run: SKIP=pylint,mypy pre-commit run --all-files
+
+  pylint:
+    name: Pylint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+
+      - run: pip install pre-commit
+      - run: pre-commit run pylint --all-files
+
+  mypy:
+    name: Mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+
+      - run: pip install pre-commit
+      - run: pre-commit run mypy --all-files
+
+  tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python: [3.6, 3.7, 3.8]
+
+    name: ${{ matrix.os }}/tests_${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+
+      - run: pip install tox coverage
+
+      - name: Run ${{ matrix.python }} tox job
+        run: tox -e py${TOX_JOB//.}  # Strip dot from python version to match tox job
+        env:
+          TOX_JOB: ${{ matrix.python }}
+
+      - run: coverage combine
+      - run: coverage report
+      - run: coverage xml -i
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1.0.5
+        with:
+          token: ${{secrets.CODECOV_TOKEN}}
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-py36
