@@ -1,6 +1,8 @@
 hypothesis-graphql
 ==================
 
+|Build| |Coverage| |Version| |Python versions| |License|
+
 Hypothesis strategies for GraphQL schemas, queries and data.
 
 **NOTE** This package is experimental, many things don't work yet and documented in a way they are planned to be used.
@@ -78,3 +80,15 @@ Then strategies might be used in this way:
         #   "title": "War and Peace"
         #   "author": {"name": "Leo Tolstoy"}
         # }
+
+.. |Build| image:: https://github.com/Stranger6667/hypothesis-graphql/workflows/build/badge.svg
+   :target: https://github.com/Stranger6667/hypothesis-graphql/actions
+.. |Coverage| image:: https://codecov.io/gh/Stranger6667/hypothesis-graphql/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/Stranger6667/hypothesis-graphql/branch/master
+   :alt: codecov.io status for master branch
+.. |Version| image:: https://img.shields.io/pypi/v/hypothesis-graphql.svg
+   :target: https://pypi.org/project/hypothesis-graphql/
+.. |Python versions| image:: https://img.shields.io/pypi/pyversions/hypothesis-graphql.svg
+   :target: https://pypi.org/project/hypothesis-graphql/
+.. |License| image:: https://img.shields.io/pypi/l/hypothesis-graphql.svg
+   :target: https://opensource.org/licenses/MIT
