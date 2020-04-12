@@ -53,8 +53,7 @@ def field_nodes(name: str, field: graphql.GraphQLField) -> st.SearchStrategy[gra
 def fields_for_type(field: graphql.GraphQLField) -> st.SearchStrategy[Optional[List[graphql.FieldNode]]]:
     """Extract proper type from the field and generate field nodes for this type."""
     type_ = field.type
-    # TODO. What if this field is a list?
-    if isinstance(type_, graphql.GraphQLWrappingType):
+    while isinstance(type_, graphql.GraphQLWrappingType):
         type_ = type_.of_type
     if isinstance(type_, graphql.GraphQLObjectType):
         return fields(type_)

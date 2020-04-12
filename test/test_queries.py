@@ -100,7 +100,13 @@ def test_arguments(arguments, node_names, notnull):
             assert node_name not in query
         if notnull:
             assert "getModel(" in query
-        graphql.parse(query)
+        parsed = graphql.parse(query)
+        selection = parsed.definitions[0].selection_set.selections[0]
+        if notnull:
+            # there should be one argument if it is not null
+            assert len(selection.arguments) == 1
+        # at least one Model field is selected
+        assert len(selection.selection_set.selections) > 0
 
     test()
 
