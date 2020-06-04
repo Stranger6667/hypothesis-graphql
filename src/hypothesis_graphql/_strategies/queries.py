@@ -1,6 +1,6 @@
 """Strategies for GraphQL queries."""
 from functools import partial
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
 
 import graphql
 from graphql.pyutils import FrozenList
@@ -10,9 +10,12 @@ from ..types import Field, InputTypeNode
 from . import primitives
 
 
-def query(schema: str) -> st.SearchStrategy[str]:
+def query(schema: Union[str, graphql.GraphQLSchema]) -> st.SearchStrategy[str]:
     """A strategy for generating valid queries for the given GraphQL schema."""
-    parsed_schema = graphql.build_schema(schema)
+    if isinstance(schema, str):
+        parsed_schema = graphql.build_schema(schema)
+    else:
+        parsed_schema = schema
     if parsed_schema.query_type is None:
         raise ValueError("Query type is not defined in the schema")
     return fields(parsed_schema.query_type).map(make_query).map(graphql.print_ast)
