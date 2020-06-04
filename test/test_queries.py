@@ -67,6 +67,14 @@ def test_query(query):
     assert_schema(SCHEMA + query)
 
 
+def test_query_from_graphql_schema():
+    query = """type Query {
+      getBooksByAuthor(name: String): [Book]
+    }"""
+    schema = graphql.build_schema(SCHEMA + query)
+    assert_schema(schema)
+
+
 @pytest.mark.parametrize("notnull", (True, False))
 @pytest.mark.parametrize(
     "arguments, node_names",
