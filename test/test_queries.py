@@ -137,23 +137,58 @@ def test_unknown_type():
         value_nodes(NewType("Test"))
 
 
-def test_custom_scalar():
-    # custom scalar types are not supported directly
-    schema = """
-    scalar Date
+CUSTOM_SCALAR_TEMPLATE = """
+scalar Date
 
-    type Object {
-      created: Date
-    }
+type Object {{
+  created: Date
+}}
+type Query {{
+  {query}
+}}
+"""
 
-    type Query {
-      getByDate(created: Date): Object
-    }
-    """
 
-    @given(query=gql_st.query(schema))
+def test_custom_scalar_non_argument():
+    # When a custom scalar type is defined
+    # And is used in a non-argument position
+
+    @given(query=gql_st.query(CUSTOM_SCALAR_TEMPLATE.format(query="getObjects: [Object]")))
+    def test(query):
+        # Then queries should be generated
+        assert "created" in query
+
+    test()
+
+
+def test_custom_scalar_argument_nullable():
+    # When a custom scalar type is defined
+    # And is used in an argument position
+    # And is nullable
+    # And there are no other arguments
+
+    num_of_queries = 0
+
+    @given(query=gql_st.query(CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date): Object")))
+    def test(query):
+        nonlocal num_of_queries
+
+        num_of_queries += 1
+        assert "getByDate {" in query
+
+    test()
+    # Then only one query should be generated
+    assert num_of_queries == 1
+
+
+def test_custom_scalar_argument():
+    # When a custom scalar type is defined
+    # And is used in an argument position
+    # And is not nullable
+
+    @given(query=gql_st.query(CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Object")))
     def test(query):
         pass
 
-    with pytest.raises(TypeError, match="Custom scalar types are not supported"):
+    with pytest.raises(TypeError, match="Non-nullable custom scalar types are not supported as arguments"):
         test()
