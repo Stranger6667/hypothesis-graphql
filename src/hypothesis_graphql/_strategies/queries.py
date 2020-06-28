@@ -66,12 +66,20 @@ def fields_for_type(field: graphql.GraphQLField) -> st.SearchStrategy[Optional[L
 
 def list_of_arguments(**kwargs: graphql.GraphQLArgument) -> st.SearchStrategy[List[graphql.ArgumentNode]]:
     """Generate a list `graphql.ArgumentNode` for a field."""
-    return st.tuples(
-        *(
-            st.builds(partial(graphql.ArgumentNode, name=graphql.NameNode(value=name)), value=argument_values(argument))  # type: ignore
-            for name, argument in kwargs.items()
+    args = []
+    for name, argument in kwargs.items():
+        try:
+            argument_strategy = argument_values(argument)
+        except TypeError as exc:
+            if not isinstance(argument.type, graphql.GraphQLNonNull):
+                continue
+            raise TypeError("Non-nullable custom scalar types are not supported as arguments") from exc
+        args.append(
+            st.builds(
+                partial(graphql.ArgumentNode, name=graphql.NameNode(value=name)), value=argument_strategy  # type: ignore
+            )
         )
-    ).map(finalize_arguments)
+    return st.tuples(*args).map(finalize_arguments)
 
 
 def finalize_arguments(nodes: Tuple[graphql.ArgumentNode, ...]) -> List[graphql.ArgumentNode]:
