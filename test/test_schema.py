@@ -2,7 +2,7 @@ import graphql
 import pytest
 from hypothesis import given, settings
 
-import hypothesis_graphql._strategies.schema as gql_st
+from hypothesis_graphql._strategies import schema as gql_st
 
 
 @pytest.mark.parametrize(

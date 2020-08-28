@@ -187,7 +187,10 @@ def object_field_nodes(name: str, field: graphql.GraphQLInputField) -> st.Search
     )
 
 
-def list_of_nodes(items: List[Tuple], strategy: Callable[[str, Field], st.SearchStrategy],) -> st.SearchStrategy[List]:
+def list_of_nodes(
+    items: List[Tuple],
+    strategy: Callable[[str, Field], st.SearchStrategy],
+) -> st.SearchStrategy[List]:
     return st.tuples(*(strategy(name, field) for name, field in items)).map(list)
 
 

@@ -3,7 +3,7 @@ import pytest
 from graphql import GraphQLNamedType
 from hypothesis import given
 
-import hypothesis_graphql.strategies as gql_st
+from hypothesis_graphql import strategies as gql_st
 from hypothesis_graphql._strategies.queries import value_nodes
 
 SCHEMA = """

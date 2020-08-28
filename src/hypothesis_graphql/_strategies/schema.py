@@ -17,7 +17,9 @@ def definition() -> st.SearchStrategy[str]:
     # executableDefinition
     # 	| typeSystemDefinition
     # 	| typeSystemExtension;
-    return st.one_of(typesystem_definition(),)
+    return st.one_of(
+        typesystem_definition(),
+    )
 
 
 def typesystem_definition() -> st.SearchStrategy[str]:
