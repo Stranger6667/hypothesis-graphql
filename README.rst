@@ -1,7 +1,7 @@
 hypothesis-graphql
 ==================
 
-|Build| |Coverage| |Version| |Python versions| |License|
+|Build| |Coverage| |Version| |Python versions| |Chat| |License|
 
 Hypothesis strategies for GraphQL schemas, queries and data.
 
@@ -63,5 +63,8 @@ Then strategies might be used in this way:
    :target: https://pypi.org/project/hypothesis-graphql/
 .. |Python versions| image:: https://img.shields.io/pypi/pyversions/hypothesis-graphql.svg
    :target: https://pypi.org/project/hypothesis-graphql/
+.. |Chat| image:: https://img.shields.io/gitter/room/Stranger6667/hypothesis-graphql.svg
+   :target: https://gitter.im/Stranger6667/hypothesis-graphql
+   :alt: Gitter
 .. |License| image:: https://img.shields.io/pypi/l/hypothesis-graphql.svg
    :target: https://opensource.org/licenses/MIT
