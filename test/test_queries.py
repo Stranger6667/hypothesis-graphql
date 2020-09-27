@@ -1,7 +1,7 @@
 import graphql
 import pytest
 from graphql import GraphQLNamedType
-from hypothesis import given
+from hypothesis import find, given
 
 from hypothesis_graphql import strategies as gql_st
 from hypothesis_graphql._strategies.queries import value_nodes
@@ -117,6 +117,42 @@ def test_arguments(arguments, node_names, notnull):
         assert len(selection.selection_set.selections) > 0
 
     test()
+
+
+@pytest.mark.parametrize(
+    "query, minimum",
+    (
+        (
+            "getAuthors: [Author]",
+            "",
+        ),
+        (
+            "getAuthors(value: Int!): [Author]",
+            "(value: 0)",
+        ),
+        (
+            "getAuthors(value: Float!): [Author]",
+            "(value: 0.0)",
+        ),
+        (
+            "getAuthors(value: String!): [Author]",
+            '(value: "")',
+        ),
+        (
+            "getAuthors(value: Color!): [Author]",
+            "(value: RED)",
+        ),
+    ),
+)
+def test_minimal_queries(query, minimum):
+    schema = SCHEMA + f"type Query {{ {query} }}"
+    strategy = gql_st.query(schema)
+    minimal_query = f"""{{
+  getAuthors{minimum} {{
+    name
+  }}
+}}"""
+    assert find(strategy, lambda x: True).strip() == minimal_query
 
 
 def test_missing_query():
