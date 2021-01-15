@@ -6,6 +6,11 @@ Changelog
 `Unreleased`_
 -------------
 
+Changed
+~~~~~~~
+
+- Relax requirement on ``Hypothesis``.
+
 `0.3.2`_ - 2020-09-27
 ---------------------
 
