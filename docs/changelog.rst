@@ -6,6 +6,11 @@ Changelog
 `Unreleased`_
 -------------
 
+Added
+~~~~~
+
+- Support for Python 3.9
+
 Changed
 ~~~~~~~
 
