@@ -1,26 +1,21 @@
-.. _changelog:
-
 Changelog
 =========
 
-`Unreleased`_
--------------
+`Unreleased`_ - TBD
+-------------------
 
-Added
-~~~~~
+**Added**
 
 - Support for Python 3.9
 
-Changed
-~~~~~~~
+**Changed**
 
 - Relax requirement on ``Hypothesis``.
 
 `0.3.2`_ - 2020-09-27
 ---------------------
 
-Changed
-~~~~~~~
+**Changed**
 
 - Nullable custom scalar types are handled gracefully in argument positions.
   Non-nullable types raise a ``TypeError`` in such cases.
@@ -30,21 +25,18 @@ Changed
 `0.3.1`_ - 2020-06-04
 ---------------------
 
-Added
-~~~~~
+**Added**
 
 - Support for creating ``query`` strategies from ``GraphQLSchema`` instances
 
 `0.3.0`_ - 2020-04-12
 ---------------------
 
-Added
-~~~~~
+**Added**
 
 - Query arguments generation
 
-Fixed
-~~~~~
+**Fixed**
 
 - Selecting fields in queries
 
@@ -57,5 +49,3 @@ Fixed
 .. _0.3.2: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.1...v0.3.2
 .. _0.3.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.0...v0.3.1
 .. _0.3.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.2.0...v0.3.0
-
-.. _#2: https://github.com/stranger6667/hypothesis-graphql/issues/2

@@ -43,6 +43,7 @@ Then strategies might be used in this way:
 
     SCHEMA = "..."  # the one above
 
+
     @given(query=gql_st.query(SCHEMA))
     def test_query(query):
         ...
