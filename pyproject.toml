@@ -24,7 +24,7 @@ license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.6"
-hypothesis = "^5.8.0"
+hypothesis = ">5.8.0"
 graphql-core = "^3.1.0"
 
 [tool.poetry.dev-dependencies]
