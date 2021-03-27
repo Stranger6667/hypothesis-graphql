@@ -55,6 +55,18 @@ Then strategies might be used in this way:
         #   }
         # }
 
+To restrict the set of fields in generated queries use the ``fields`` argument:
+
+.. code:: python
+
+    ...
+
+
+    @given(query=gql_st.query(SCHEMA, fields=["getAuthors"]))
+    def test_query(query):
+        # Only `getAuthors` will be generated
+        ...
+
 .. |Build| image:: https://github.com/Stranger6667/hypothesis-graphql/workflows/build/badge.svg
    :target: https://github.com/Stranger6667/hypothesis-graphql/actions
 .. |Coverage| image:: https://codecov.io/gh/Stranger6667/hypothesis-graphql/branch/master/graph/badge.svg

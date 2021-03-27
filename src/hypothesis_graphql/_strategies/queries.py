@@ -1,6 +1,6 @@
 """Strategies for GraphQL queries."""
 from functools import partial
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Iterable, List, Optional, Tuple, Union
 
 import graphql
 from graphql.pyutils import FrozenList
@@ -10,21 +10,40 @@ from ..types import Field, InputTypeNode
 from . import primitives
 
 
-def query(schema: Union[str, graphql.GraphQLSchema]) -> st.SearchStrategy[str]:
-    """A strategy for generating valid queries for the given GraphQL schema."""
+def query(schema: Union[str, graphql.GraphQLSchema], fields: Optional[Iterable[str]] = None) -> st.SearchStrategy[str]:
+    """A strategy for generating valid queries for the given GraphQL schema.
+
+    The output query will contain a subset of fields defined in the `Query` type.
+
+    :param schema: GraphQL schema as a string or `graphql.GraphQLSchema`.
+    :param fields: Restrict generated fields to ones in this list.
+    """
     if isinstance(schema, str):
         parsed_schema = graphql.build_schema(schema)
     else:
         parsed_schema = schema
     if parsed_schema.query_type is None:
         raise ValueError("Query type is not defined in the schema")
-    return fields(parsed_schema.query_type).map(make_query).map(graphql.print_ast)
+    if fields is not None:
+        fields = tuple(fields)
+        if not fields:
+            raise ValueError("If you pass `fields`, it should not be empty")
+        invalid_fields = tuple(field for field in fields if field not in parsed_schema.query_type.fields)
+        if invalid_fields:
+            raise ValueError(f"Unknown fields: {', '.join(invalid_fields)}")
+    return _fields(parsed_schema.query_type, fields=fields).map(make_query).map(graphql.print_ast)
 
 
-def fields(object_type: graphql.GraphQLObjectType) -> st.SearchStrategy[List[graphql.FieldNode]]:
+def _fields(
+    object_type: graphql.GraphQLObjectType, fields: Optional[Tuple[str, ...]] = None
+) -> st.SearchStrategy[List[graphql.FieldNode]]:
     """Generate a subset of fields defined on the given type."""
+    if fields:
+        subset = {name: value for name, value in object_type.fields.items() if name in fields}
+    else:
+        subset = object_type.fields
     # minimum 1 field, an empty query is not valid
-    return subset_of_fields(**object_type.fields).flatmap(lists_of_field_nodes)
+    return subset_of_fields(**subset).flatmap(lists_of_field_nodes)
 
 
 make_selection_set_node = partial(graphql.SelectionSetNode, kind="selection_set")
@@ -59,7 +78,7 @@ def fields_for_type(field: graphql.GraphQLField) -> st.SearchStrategy[Optional[L
     while isinstance(type_, graphql.GraphQLWrappingType):
         type_ = type_.of_type
     if isinstance(type_, graphql.GraphQLObjectType):
-        return fields(type_)
+        return _fields(type_)
     # Only object has field, others don't
     return st.none()
 

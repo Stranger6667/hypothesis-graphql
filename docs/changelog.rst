@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Added**
+
+- Restricting fields in the ``query`` output via the ``fields`` argument.
+
 `0.3.3`_ - 2021-01-15
 ---------------------
 
