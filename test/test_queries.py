@@ -43,6 +43,17 @@ type Model {
 """
 
 
+@pytest.fixture
+def simple_schema():
+    return (
+        SCHEMA
+        + """type Query {
+          getBooks: [Book]
+          getAuthors: [Author]
+        }"""
+    )
+
+
 def assert_schema(schema):
     @given(query=gql_st.query(schema))
     def test(query):
@@ -65,6 +76,25 @@ def assert_schema(schema):
 )
 def test_query(query):
     assert_schema(SCHEMA + query)
+
+
+def test_query_subset(simple_schema):
+    @given(query=gql_st.query(simple_schema, fields=["getBooks"]))
+    def test(query):
+        graphql.parse(query)
+        assert "getAuthors" not in query
+
+    test()
+
+
+def test_empty_fields(simple_schema):
+    with pytest.raises(ValueError, match="If you pass `fields`, it should not be empty"):
+        gql_st.query(simple_schema, fields=[])
+
+
+def test_wrong_fields(simple_schema):
+    with pytest.raises(ValueError, match="Unknown fields: wrong"):
+        gql_st.query(simple_schema, fields=["wrong"])
 
 
 def test_query_from_graphql_schema():
