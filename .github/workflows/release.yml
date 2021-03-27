@@ -6,28 +6,28 @@ on:
 
 jobs:
 
-  release_package:
-    name: Build and publish package to pypi.org
-    runs-on: ubuntu-latest
+  build-n-publish:
+    name: Build and publish Python 🐍distributions 📦 to PyPI
+    runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@master
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
       with:
-        fetch-depth: 1
-
-    - uses: actions/setup-python@v1
+        python-version: 3.9
+    - name: Install tox
+      run: >-
+        python -m
+        pip install
+        tox
+        --user
+    - name: Build a binary wheel and a source tarball
+      run: >-
+        python -m tox -e build
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@master
       with:
-        python-version: '3.8'
-
-    - run: pip install poetry
-
-    - name: Build package
-      run: poetry build --no-interaction
-
-    - name: Publish package
-      run: poetry publish --no-interaction --username=${PYPI_USERNAME} --password=${PYPI_PASSWORD}
-      env:
-        PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        password: ${{ secrets.PYPI_TOKEN }}
 
   release-notes:
     name: Release Notes
