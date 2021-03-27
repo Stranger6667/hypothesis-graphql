@@ -4,6 +4,9 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+`0.4.0`_ - 2021-03-27
+---------------------
+
 **Added**
 
 - Restricting fields in the ``query`` output via the ``fields`` argument.
@@ -52,7 +55,8 @@ Changelog
 
 - Initial public release
 
-.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.3...HEAD
+.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.4.0...HEAD
+.. _0.4.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.3...v0.4.0
 .. _0.3.3: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.2...v0.3.3
 .. _0.3.2: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.1...v0.3.2
 .. _0.3.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.0...v0.3.1
