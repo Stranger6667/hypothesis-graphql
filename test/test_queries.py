@@ -1,7 +1,7 @@
 import graphql
 import pytest
 from graphql import GraphQLNamedType
-from hypothesis import find, given
+from hypothesis import HealthCheck, find, given, settings
 
 from hypothesis_graphql import strategies as gql_st
 from hypothesis_graphql._strategies.queries import value_nodes
@@ -56,6 +56,7 @@ def simple_schema():
 
 def assert_schema(schema):
     @given(query=gql_st.query(schema))
+    @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
         graphql.parse(query)
 
@@ -80,6 +81,7 @@ def test_query(query):
 
 def test_query_subset(simple_schema):
     @given(query=gql_st.query(simple_schema, fields=["getBooks"]))
+    @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
         graphql.parse(query)
         assert "getAuthors" not in query
@@ -133,6 +135,7 @@ def test_arguments(arguments, node_names, notnull):
     }}"""
 
     @given(query=gql_st.query(SCHEMA + query_type))
+    @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
         for node_name in node_names:
             assert node_name not in query
@@ -220,6 +223,7 @@ def test_custom_scalar_non_argument():
     # And is used in a non-argument position
 
     @given(query=gql_st.query(CUSTOM_SCALAR_TEMPLATE.format(query="getObjects: [Object]")))
+    @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
         # Then queries should be generated
         assert "created" in query
@@ -236,6 +240,7 @@ def test_custom_scalar_argument_nullable():
     num_of_queries = 0
 
     @given(query=gql_st.query(CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date): Object")))
+    @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
         nonlocal num_of_queries
 
