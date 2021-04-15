@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Fixed**
+
+- Do not generate Unicode surrogates for ``String`` types. `#30`_
+
 `0.4.0`_ - 2021-03-27
 ---------------------
 
@@ -61,3 +65,5 @@ Changelog
 .. _0.3.2: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.1...v0.3.2
 .. _0.3.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.0...v0.3.1
 .. _0.3.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.2.0...v0.3.0
+
+.. _#30: https://github.com/Stranger6667/hypothesis-graphql/30
