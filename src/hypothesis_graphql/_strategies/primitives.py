@@ -43,7 +43,7 @@ def float_(nullable: bool = True) -> st.SearchStrategy[graphql.FloatValueNode]:
 
 
 def string(nullable: bool = True) -> st.SearchStrategy[graphql.StringValueNode]:
-    value = st.text()
+    value = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF))
     if nullable:
         value |= st.none()
     return st.builds(graphql.StringValueNode, value=value)

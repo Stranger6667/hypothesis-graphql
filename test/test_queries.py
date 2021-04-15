@@ -1,7 +1,7 @@
 import graphql
 import pytest
 from graphql import GraphQLNamedType
-from hypothesis import HealthCheck, find, given, settings
+from hypothesis import HealthCheck, assume, find, given, settings
 
 from hypothesis_graphql import strategies as gql_st
 from hypothesis_graphql._strategies.queries import value_nodes
@@ -263,3 +263,22 @@ def test_custom_scalar_argument():
 
     with pytest.raises(TypeError, match="Non-nullable custom scalar types are not supported as arguments"):
         test()
+
+
+def test_no_surrogates():
+    # Unicode surrogates are not supported by GraphQL spec
+    schema = """
+    type Query {
+        hello(user: String!): String
+    }
+    """
+
+    @given(query=gql_st.query(schema))
+    def test(query):
+        document = graphql.parse(query)
+        argument_node = document.definitions[0].selection_set.selections[0].arguments[0]
+        assume(argument_node.name.value == "user")
+        value = argument_node.value.value
+        value.encode("utf8")
+
+    test()
