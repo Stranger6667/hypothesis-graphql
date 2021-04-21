@@ -4,6 +4,9 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+`0.4.2`_ - 2021-04-21
+---------------------
+
 **Fixed**
 
 - Generating invalid queries for nullable enum types as arguments. `#32`_
@@ -66,7 +69,8 @@ Changelog
 
 - Initial public release
 
-.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.4.1...HEAD
+.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.4.2...HEAD
+.. _0.4.2: https://github.com/stranger6667/hypothesis-graphql/compare/v0.4.1...v0.4.2
 .. _0.4.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.4.0...v0.4.1
 .. _0.4.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.3...v0.4.0
 .. _0.3.3: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.2...v0.3.3
