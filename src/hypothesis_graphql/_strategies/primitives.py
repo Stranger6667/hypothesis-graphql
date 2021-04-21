@@ -23,9 +23,10 @@ def scalar(type_: graphql.GraphQLScalarType, nullable: bool = True) -> st.Search
 
 def enum(type_: graphql.GraphQLEnumType, nullable: bool = True) -> st.SearchStrategy[graphql.EnumValueNode]:
     enum_value = st.sampled_from(list(type_.values))
+    strategy = st.builds(graphql.EnumValueNode, value=enum_value)
     if nullable:
-        enum_value |= st.none()
-    return st.builds(graphql.EnumValueNode, value=enum_value)
+        strategy |= st.just(graphql.NullValueNode())
+    return strategy
 
 
 def int_(nullable: bool = True) -> st.SearchStrategy[graphql.IntValueNode]:

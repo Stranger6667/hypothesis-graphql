@@ -23,6 +23,10 @@ enum Color {
   BLUE
 }
 
+input EnumInput {
+  color: Color
+}
+
 input QueryInput {
   eq: String
   ne: String
@@ -117,6 +121,7 @@ def test_query_from_graphql_schema():
         ("id: ID", ("IntValueNode", "StringValueNode")),
         ("boolean: Boolean", ("BooleanValueNode",)),
         ("color: Color", ("EnumValueNode",)),
+        ("color: EnumInput", ("EnumValueNode",)),
         ("contain: [Int]", ("ListValueNode", "IntValueNode")),
         ("contain: [Float]", ("ListValueNode", "FloatValueNode")),
         ("contain: [String]", ("ListValueNode", "StringValueNode")),
