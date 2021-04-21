@@ -3,7 +3,6 @@ from functools import partial
 from typing import Callable, Iterable, List, Optional, Tuple, Union
 
 import graphql
-from graphql.pyutils import FrozenList
 from hypothesis import strategies as st
 
 from ..types import Field, InputTypeNode
@@ -98,49 +97,7 @@ def list_of_arguments(**kwargs: graphql.GraphQLArgument) -> st.SearchStrategy[Li
                 partial(graphql.ArgumentNode, name=graphql.NameNode(value=name)), value=argument_strategy  # type: ignore
             )
         )
-    return st.tuples(*args).map(finalize_arguments)
-
-
-def finalize_arguments(nodes: Tuple[graphql.ArgumentNode, ...]) -> List[graphql.ArgumentNode]:
-    """Nodes might be generated with empty values, and they should be removed from the output."""
-    return [remove_empty(node) for node in nodes if not is_empty(node.value)]
-
-
-def is_empty(node: graphql.ValueNode) -> bool:
-    # The checked values often can't be None, but generated as such.
-    # It will be better if this value won't be generated at all,
-    # but in this case argument node shouldn't be generated as well - there might be some better way to handle
-    # empty arguments without overriding actual node types (example - what if `None` is actually a valid value?)
-    if isinstance(
-        node,
-        (
-            graphql.IntValueNode,
-            graphql.FloatValueNode,
-            graphql.StringValueNode,
-            graphql.BooleanValueNode,
-            graphql.EnumValueNode,
-        ),
-    ):
-        return node.value is None
-    if isinstance(node, graphql.ListValueNode):
-        return node.values is None
-    if isinstance(node, graphql.ObjectValueNode):
-        return node.fields is None
-    # VariableNode or NullValueNode
-    return False
-
-
-def remove_empty(node: graphql.ArgumentNode) -> graphql.ArgumentNode:
-    """Remove empty children from list nodes."""
-    _remove_empty(node.value)
-    return node
-
-
-def _remove_empty(node: graphql.ValueNode) -> graphql.ValueNode:
-    """Recursive part for removing empty child nodes."""
-    if isinstance(node, graphql.ListValueNode) and node.values is not None:
-        node.values = FrozenList([_remove_empty(node) for node in node.values if not is_empty(node)])
-    return node
+    return st.tuples(*args).map(list)
 
 
 def argument_values(argument: graphql.GraphQLArgument) -> st.SearchStrategy[InputTypeNode]:

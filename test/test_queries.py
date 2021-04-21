@@ -62,6 +62,7 @@ def assert_schema(schema):
     @given(query=gql_st.query(schema))
     @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
+        print(query)
         graphql.parse(query)
 
     test()
@@ -123,11 +124,17 @@ def test_query_from_graphql_schema():
         ("color: Color", ("EnumValueNode",)),
         ("color: EnumInput", ("EnumValueNode",)),
         ("contain: [Int]", ("ListValueNode", "IntValueNode")),
+        ("contain: [Int!]", ("ListValueNode", "IntValueNode")),
         ("contain: [Float]", ("ListValueNode", "FloatValueNode")),
+        ("contain: [Float!]", ("ListValueNode", "FloatValueNode")),
         ("contain: [String]", ("ListValueNode", "StringValueNode")),
+        ("contain: [String!]", ("ListValueNode", "StringValueNode")),
         ("contain: [Boolean]", ("ListValueNode", "BooleanValueNode")),
+        ("contain: [Boolean!]", ("ListValueNode", "BooleanValueNode")),
         ("contain: [Color]", ("ListValueNode", "EnumValueNode")),
+        ("contain: [Color!]", ("ListValueNode", "EnumValueNode")),
         ("contain: [[Int]]", ("ListValueNode", "IntValueNode")),
+        ("contain: [[Int]!]", ("ListValueNode", "IntValueNode")),
         ("contains: QueryInput", ("ObjectValueNode",)),
         ("contains: NestedQueryInput", ("ObjectValueNode",)),
     ),
