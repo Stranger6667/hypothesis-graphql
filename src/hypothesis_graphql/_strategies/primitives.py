@@ -23,31 +23,22 @@ def scalar(type_: graphql.GraphQLScalarType, nullable: bool = True) -> st.Search
 
 def enum(type_: graphql.GraphQLEnumType, nullable: bool = True) -> st.SearchStrategy[graphql.EnumValueNode]:
     enum_value = st.sampled_from(list(type_.values))
-    strategy = st.builds(graphql.EnumValueNode, value=enum_value)
-    if nullable:
-        strategy |= st.just(graphql.NullValueNode())
-    return strategy
+    return _maybe_null(st.builds(graphql.EnumValueNode, value=enum_value), nullable)
 
 
 def int_(nullable: bool = True) -> st.SearchStrategy[graphql.IntValueNode]:
     value = st.integers().map(str)
-    if nullable:
-        value |= st.none()
-    return st.builds(graphql.IntValueNode, value=value)
+    return _maybe_null(st.builds(graphql.IntValueNode, value=value), nullable)
 
 
 def float_(nullable: bool = True) -> st.SearchStrategy[graphql.FloatValueNode]:
     value = st.floats(allow_infinity=False, allow_nan=False).map(str)
-    if nullable:
-        value |= st.none()
-    return st.builds(graphql.FloatValueNode, value=value)
+    return _maybe_null(st.builds(graphql.FloatValueNode, value=value), nullable)
 
 
 def string(nullable: bool = True) -> st.SearchStrategy[graphql.StringValueNode]:
     value = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF))
-    if nullable:
-        value |= st.none()
-    return st.builds(graphql.StringValueNode, value=value)
+    return _maybe_null(st.builds(graphql.StringValueNode, value=value), nullable)
 
 
 def id_(nullable: bool = True) -> st.SearchStrategy[Union[graphql.StringValueNode, graphql.IntValueNode]]:
@@ -55,7 +46,10 @@ def id_(nullable: bool = True) -> st.SearchStrategy[Union[graphql.StringValueNod
 
 
 def boolean(nullable: bool = True) -> st.SearchStrategy[graphql.BooleanValueNode]:
-    value = st.booleans()
+    return _maybe_null(st.builds(graphql.BooleanValueNode, value=st.booleans()), nullable)
+
+
+def _maybe_null(strategy: st.SearchStrategy, nullable: bool) -> st.SearchStrategy:
     if nullable:
-        value |= st.none()
-    return st.builds(graphql.BooleanValueNode, value=value)
+        strategy |= st.just(graphql.NullValueNode())
+    return strategy
