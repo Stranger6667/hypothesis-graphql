@@ -62,7 +62,6 @@ def assert_schema(schema):
     @given(query=gql_st.query(schema))
     @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
-        print(query)
         graphql.parse(query)
 
     test()
