@@ -50,7 +50,7 @@ make_selection_set_node = partial(graphql.SelectionSetNode, kind="selection_set"
 
 def make_query(selections: List[graphql.FieldNode]) -> graphql.DocumentNode:
     """Create top-level node for a query AST."""
-    return graphql.DocumentNode(  # type: ignore
+    return graphql.DocumentNode(
         kind="document",
         definitions=[
             graphql.OperationDefinitionNode(
@@ -65,7 +65,7 @@ def make_query(selections: List[graphql.FieldNode]) -> graphql.DocumentNode:
 def field_nodes(name: str, field: graphql.GraphQLField) -> st.SearchStrategy[graphql.FieldNode]:
     """Generate a single field node with optional children."""
     return st.builds(
-        partial(graphql.FieldNode, name=graphql.NameNode(value=name)),  # type: ignore
+        partial(graphql.FieldNode, name=graphql.NameNode(value=name)),
         arguments=list_of_arguments(**field.args),
         selection_set=st.builds(make_selection_set_node, selections=fields_for_type(field)),
     )
@@ -93,9 +93,7 @@ def list_of_arguments(**kwargs: graphql.GraphQLArgument) -> st.SearchStrategy[Li
                 continue
             raise TypeError("Non-nullable custom scalar types are not supported as arguments") from exc
         args.append(
-            st.builds(
-                partial(graphql.ArgumentNode, name=graphql.NameNode(value=name)), value=argument_strategy  # type: ignore
-            )
+            st.builds(partial(graphql.ArgumentNode, name=graphql.NameNode(value=name)), value=argument_strategy)
         )
     return st.tuples(*args).map(list)
 
@@ -166,7 +164,7 @@ def subset_of_fields(**all_fields: Field) -> st.SearchStrategy[List[Tuple[str, F
 
 def object_field_nodes(name: str, field: graphql.GraphQLInputField) -> st.SearchStrategy[graphql.ObjectFieldNode]:
     return st.builds(
-        partial(graphql.ObjectFieldNode, name=graphql.NameNode(value=name)),  # type: ignore
+        partial(graphql.ObjectFieldNode, name=graphql.NameNode(value=name)),
         value=value_nodes(field.type),
     )
 
