@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Performance**
+
+- Use ```hypothesis.strategies.recursive`` for building queries which leads to ~7.5x average generation speed.
+
 `0.4.2`_ - 2021-04-21
 ---------------------
 

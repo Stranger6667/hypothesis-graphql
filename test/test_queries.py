@@ -193,7 +193,7 @@ def test_minimal_queries(query, minimum):
     strategy = gql_st.query(schema)
     minimal_query = f"""{{
   getAuthors{minimum} {{
-    name
+    books
   }}
 }}"""
     assert find(strategy, lambda x: True).strip() == minimal_query
