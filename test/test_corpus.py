@@ -20,6 +20,7 @@ SCHEMAS_WITH_CUSTOM_SCALARS = {
     "Spacex Land",
     "TravelgateX",
     "HIVDB",
+    "Contentful",
 }
 
 
