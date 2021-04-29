@@ -19,6 +19,7 @@ SCHEMAS_WITH_CUSTOM_SCALARS = {
     "MusicBrainz",
     "Spacex Land",
     "TravelgateX",
+    "HIVDB",
 }
 
 
