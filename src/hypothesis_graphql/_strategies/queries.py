@@ -71,15 +71,34 @@ def field_nodes(name: str, field: graphql.GraphQLField) -> st.SearchStrategy[gra
     )
 
 
-def fields_for_type(field: graphql.GraphQLField) -> st.SearchStrategy[Optional[List[graphql.FieldNode]]]:
+def fields_for_type(
+    field: graphql.GraphQLField,
+) -> st.SearchStrategy[Union[List[graphql.FieldNode], List[graphql.InlineFragmentNode], None]]:
     """Extract proper type from the field and generate field nodes for this type."""
     type_ = field.type
     while isinstance(type_, graphql.GraphQLWrappingType):
         type_ = type_.of_type
     if isinstance(type_, graphql.GraphQLObjectType):
         return _fields(type_)
+    if isinstance(type_, graphql.GraphQLUnionType):
+        # A union is a set of object types
+        return st.lists(st.sampled_from(type_.types), min_size=1, unique_by=lambda m: m.name).flatmap(inline_fragments)
     # Only object has field, others don't
     return st.none()
+
+
+def inline_fragments(items: List[graphql.GraphQLObjectType]) -> st.SearchStrategy[List[graphql.InlineFragmentNode]]:
+    """Create inline fragment nodes for each given item."""
+    return st.tuples(*(inline_fragment(type_) for type_ in items)).map(list)
+
+
+def inline_fragment(type_: graphql.GraphQLObjectType) -> st.SearchStrategy[graphql.InlineFragmentNode]:
+    return st.builds(
+        partial(
+            graphql.InlineFragmentNode, type_condition=graphql.NamedTypeNode(name=graphql.NameNode(value=type_.name))
+        ),
+        selection_set=st.builds(make_selection_set_node, selections=_fields(type_)),
+    )
 
 
 def list_of_arguments(**kwargs: graphql.GraphQLArgument) -> st.SearchStrategy[List[graphql.ArgumentNode]]:

@@ -36,9 +36,19 @@ input NestedQueryInput {
   code: QueryInput
 }
 
+type Image {
+  path: String
+}
+type Video {
+  duration: Int
+}
+
+union Media = Image | Video
+
 type Model {
   int: Int,
   float: Float,
+  media: Media,
   string: String
   id: ID,
   boolean: Boolean
