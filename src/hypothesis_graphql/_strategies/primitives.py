@@ -6,6 +6,9 @@ from hypothesis import strategies as st
 
 from ..types import ScalarValueNode
 
+MIN_INT = -(2 ** 31)
+MAX_INT = 2 ** 31 - 1
+
 
 def scalar(type_: graphql.GraphQLScalarType, nullable: bool = True) -> st.SearchStrategy[ScalarValueNode]:
     if type_.name == "Int":
@@ -27,7 +30,7 @@ def enum(type_: graphql.GraphQLEnumType, nullable: bool = True) -> st.SearchStra
 
 
 def int_(nullable: bool = True) -> st.SearchStrategy[graphql.IntValueNode]:
-    value = st.integers().map(str)
+    value = st.integers(min_value=MIN_INT, max_value=MAX_INT).map(str)
     return _maybe_null(st.builds(graphql.IntValueNode, value=value), nullable)
 
 
