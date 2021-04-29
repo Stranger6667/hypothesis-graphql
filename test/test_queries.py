@@ -2,6 +2,7 @@ import graphql
 import pytest
 from graphql import GraphQLNamedType
 from hypothesis import HealthCheck, assume, find, given, settings
+from hypothesis import strategies as st
 
 from hypothesis_graphql import strategies as gql_st
 from hypothesis_graphql._strategies.queries import value_nodes
@@ -45,7 +46,15 @@ type Video {
 
 union Media = Image | Video
 
-type Model {
+interface Node {
+  id: ID
+}
+
+interface Alone {
+  id: ID
+}
+
+type Model implements Node {
   int: Int,
   float: Float,
   media: Media,
@@ -191,6 +200,22 @@ def test_arguments(arguments, node_names, notnull):
 
 
 @pytest.mark.parametrize(
+    "query_type",
+    (
+        "type Query { getModel: Node }",
+        "type Query { getModel: Alone }",
+    ),
+)
+@given(data=st.data())
+@settings(suppress_health_check=[HealthCheck.too_slow])
+def test_interface(data, query_type):
+    schema = SCHEMA + query_type
+    parsed_schema = graphql.build_schema(schema)
+    query = data.draw(gql_st.query(schema))
+    validate_query(parsed_schema, query)
+
+
+@pytest.mark.parametrize(
     "query, minimum",
     (
         (
@@ -241,7 +266,7 @@ def test_unknown_type():
         pass
 
     with pytest.raises(TypeError, match="Type NewType is not supported."):
-        value_nodes(NewType("Test"))
+        value_nodes(None, NewType("Test"))
 
 
 CUSTOM_SCALAR_TEMPLATE = """

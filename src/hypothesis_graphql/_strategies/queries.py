@@ -1,12 +1,20 @@
 """Strategies for GraphQL queries."""
 from functools import partial
-from typing import Callable, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, TypeVar, Union
 
+import attr
 import graphql
 from hypothesis import strategies as st
 
-from ..types import Field, InputTypeNode
+from ..types import Field, InputTypeNode, InterfaceOrObject, SelectionNodes
 from . import primitives
+
+
+@attr.s(slots=True)
+class Context:
+    """The common context for query generation."""
+
+    schema: graphql.GraphQLSchema = attr.ib()
 
 
 def query(schema: Union[str, graphql.GraphQLSchema], fields: Optional[Iterable[str]] = None) -> st.SearchStrategy[str]:
@@ -30,25 +38,36 @@ def query(schema: Union[str, graphql.GraphQLSchema], fields: Optional[Iterable[s
         invalid_fields = tuple(field for field in fields if field not in parsed_schema.query_type.fields)
         if invalid_fields:
             raise ValueError(f"Unknown fields: {', '.join(invalid_fields)}")
-    return _fields(parsed_schema.query_type, fields=fields).map(make_query).map(graphql.print_ast)
+    context = Context(parsed_schema)
+    return _fields(context, parsed_schema.query_type, fields=fields).map(make_query).map(graphql.print_ast)
 
 
 def _fields(
-    object_type: graphql.GraphQLObjectType, fields: Optional[Tuple[str, ...]] = None
-) -> st.SearchStrategy[List[graphql.FieldNode]]:
+    context: Context,
+    object_type: InterfaceOrObject,
+    fields: Optional[Tuple[str, ...]] = None,
+) -> st.SearchStrategy[SelectionNodes]:
     """Generate a subset of fields defined on the given type."""
     if fields:
         subset = {name: value for name, value in object_type.fields.items() if name in fields}
     else:
         subset = object_type.fields
     # minimum 1 field, an empty query is not valid
-    return subset_of_fields(**subset).flatmap(lists_of_field_nodes)
+    return subset_of_fields(**subset).flatmap(lambda f: lists_of_field_nodes(context, f))
 
 
 make_selection_set_node = partial(graphql.SelectionSetNode, kind="selection_set")
 
 
-def make_query(selections: List[graphql.FieldNode]) -> graphql.DocumentNode:
+def unwrap_field_type(field: Field) -> graphql.GraphQLNamedType:
+    """Get the underlying field type which is not wrapped."""
+    type_ = field.type
+    while isinstance(type_, graphql.GraphQLWrappingType):
+        type_ = type_.of_type
+    return type_
+
+
+def make_query(selections: SelectionNodes) -> graphql.DocumentNode:
     """Create top-level node for a query AST."""
     return graphql.DocumentNode(
         kind="document",
@@ -62,51 +81,83 @@ def make_query(selections: List[graphql.FieldNode]) -> graphql.DocumentNode:
     )
 
 
-def field_nodes(name: str, field: graphql.GraphQLField) -> st.SearchStrategy[graphql.FieldNode]:
+def field_nodes(context: Context, name: str, field: graphql.GraphQLField) -> st.SearchStrategy[graphql.FieldNode]:
     """Generate a single field node with optional children."""
     return st.builds(
         partial(graphql.FieldNode, name=graphql.NameNode(value=name)),
-        arguments=list_of_arguments(**field.args),
-        selection_set=st.builds(make_selection_set_node, selections=fields_for_type(field)),
+        arguments=list_of_arguments(context, field.args),
+        selection_set=st.builds(make_selection_set_node, selections=fields_for_type(context, field)),
     )
 
 
 def fields_for_type(
+    context: Context,
     field: graphql.GraphQLField,
-) -> st.SearchStrategy[Union[List[graphql.FieldNode], List[graphql.InlineFragmentNode], None]]:
+) -> st.SearchStrategy[Optional[SelectionNodes]]:
     """Extract proper type from the field and generate field nodes for this type."""
-    type_ = field.type
-    while isinstance(type_, graphql.GraphQLWrappingType):
-        type_ = type_.of_type
-    if isinstance(type_, graphql.GraphQLObjectType):
-        return _fields(type_)
-    if isinstance(type_, graphql.GraphQLUnionType):
-        # A union is a set of object types
-        return st.lists(st.sampled_from(type_.types), min_size=1, unique_by=lambda m: m.name).flatmap(inline_fragments)
-    # Only object has field, others don't
+    field_type = unwrap_field_type(field)
+    if isinstance(field_type, graphql.GraphQLObjectType):
+        return _fields(context, field_type)
+    if isinstance(field_type, graphql.GraphQLInterfaceType):
+        # Besides the fields on the interface type, it is possible to generate inline fragments on types that
+        # implement this interface type
+        implementations = context.schema.get_implementations(field_type).objects
+        if not implementations:
+            # Shortcut when there are no implementations - take fields from the interface itself
+            return _fields(context, field_type)
+        variants: List[InterfaceOrObject] = [field_type, *implementations]
+        return unique_by(variants, lambda v: v.name).flatmap(lambda t: interfaces(context, t))
+    if isinstance(field_type, graphql.GraphQLUnionType):
+        # A union is a set of object types - take a subset of them and generate inline fragments
+        return unique_by(field_type.types, lambda m: m.name).flatmap(lambda m: inline_fragments(context, m))
+    # Other types don't have fields
     return st.none()
 
 
-def inline_fragments(items: List[graphql.GraphQLObjectType]) -> st.SearchStrategy[List[graphql.InlineFragmentNode]]:
+def interfaces(context: Context, types: List[InterfaceOrObject]) -> st.SearchStrategy[SelectionNodes]:
+    strategies = [
+        inline_fragment(context, type_) if isinstance(type_, graphql.GraphQLObjectType) else _fields(context, type_)
+        for type_ in types
+    ]
+    return st.tuples(*strategies).map(flatten).map(list)  # type: ignore
+
+
+T = TypeVar("T")
+
+
+def flatten(items: Tuple[Union[T, List[T]], ...]) -> Generator[T, None, None]:
+    for item in items:
+        if isinstance(item, list):
+            yield from item
+        else:
+            yield item
+
+
+def inline_fragments(context: Context, items: List[graphql.GraphQLObjectType]) -> st.SearchStrategy[SelectionNodes]:
     """Create inline fragment nodes for each given item."""
-    return st.tuples(*(inline_fragment(type_) for type_ in items)).map(list)
+    return fixed_lists((inline_fragment(context, type_) for type_ in items))
 
 
-def inline_fragment(type_: graphql.GraphQLObjectType) -> st.SearchStrategy[graphql.InlineFragmentNode]:
+def inline_fragment(
+    context: Context, type_: graphql.GraphQLObjectType
+) -> st.SearchStrategy[graphql.InlineFragmentNode]:
+    """Build `InlineFragmentNode` for the given type."""
     return st.builds(
         partial(
             graphql.InlineFragmentNode, type_condition=graphql.NamedTypeNode(name=graphql.NameNode(value=type_.name))
         ),
-        selection_set=st.builds(make_selection_set_node, selections=_fields(type_)),
+        selection_set=st.builds(make_selection_set_node, selections=_fields(context, type_)),
     )
 
 
-def list_of_arguments(**kwargs: graphql.GraphQLArgument) -> st.SearchStrategy[List[graphql.ArgumentNode]]:
+def list_of_arguments(
+    context: Context, kwargs: Dict[str, graphql.GraphQLArgument]
+) -> st.SearchStrategy[List[graphql.ArgumentNode]]:
     """Generate a list `graphql.ArgumentNode` for a field."""
     args = []
     for name, argument in kwargs.items():
         try:
-            argument_strategy = argument_values(argument)
+            argument_strategy = argument_values(context, argument)
         except TypeError as exc:
             if not isinstance(argument.type, graphql.GraphQLNonNull):
                 continue
@@ -114,15 +165,23 @@ def list_of_arguments(**kwargs: graphql.GraphQLArgument) -> st.SearchStrategy[Li
         args.append(
             st.builds(partial(graphql.ArgumentNode, name=graphql.NameNode(value=name)), value=argument_strategy)
         )
+    return fixed_lists(args)
+
+
+def fixed_lists(args: Iterable[st.SearchStrategy[T]]) -> st.SearchStrategy[List[T]]:
     return st.tuples(*args).map(list)
 
 
-def argument_values(argument: graphql.GraphQLArgument) -> st.SearchStrategy[InputTypeNode]:
+def unique_by(variants: List[T], key: Callable[[T], Any]) -> st.SearchStrategy[List[T]]:
+    return st.lists(st.sampled_from(variants), min_size=1, unique_by=key)
+
+
+def argument_values(context: Context, argument: graphql.GraphQLArgument) -> st.SearchStrategy[InputTypeNode]:
     """Value of `graphql.ArgumentNode`."""
-    return value_nodes(argument.type)
+    return value_nodes(context, argument.type)
 
 
-def value_nodes(type_: graphql.GraphQLInputType) -> st.SearchStrategy[InputTypeNode]:
+def value_nodes(context: Context, type_: graphql.GraphQLInputType) -> st.SearchStrategy[InputTypeNode]:
     """Generate value nodes of a type, that corresponds to the input type.
 
     They correspond to all `GraphQLInputType` variants:
@@ -142,9 +201,9 @@ def value_nodes(type_: graphql.GraphQLInputType) -> st.SearchStrategy[InputTypeN
         return primitives.enum(type_, nullable)
     # Types with children
     if isinstance(type_, graphql.GraphQLList):
-        return lists(type_, nullable)
+        return lists(context, type_, nullable)
     if isinstance(type_, graphql.GraphQLInputObjectType):
-        return objects(type_, nullable)
+        return objects(context, type_, nullable)
     raise TypeError(f"Type {type_.__class__.__name__} is not supported.")
 
 
@@ -157,18 +216,22 @@ def check_nullable(type_: graphql.GraphQLInputType) -> Tuple[graphql.GraphQLInpu
     return type_, nullable
 
 
-def lists(type_: graphql.GraphQLList, nullable: bool = True) -> st.SearchStrategy[graphql.ListValueNode]:
+def lists(
+    context: Context, type_: graphql.GraphQLList, nullable: bool = True
+) -> st.SearchStrategy[graphql.ListValueNode]:
     """Generate a `graphql.ListValueNode`."""
     type_ = type_.of_type
-    list_value = st.lists(value_nodes(type_))
+    list_value = st.lists(value_nodes(context, type_))
     if nullable:
         list_value |= st.none()
     return st.builds(graphql.ListValueNode, values=list_value)
 
 
-def objects(type_: graphql.GraphQLInputObjectType, nullable: bool = True) -> st.SearchStrategy[graphql.ObjectValueNode]:
+def objects(
+    context: Context, type_: graphql.GraphQLInputObjectType, nullable: bool = True
+) -> st.SearchStrategy[graphql.ObjectValueNode]:
     """Generate a `graphql.ObjectValueNode`."""
-    fields_value = subset_of_fields(**type_.fields).flatmap(list_of_object_field_nodes)
+    fields_value = subset_of_fields(**type_.fields).flatmap(lambda x: list_of_object_field_nodes(context, x))
     if nullable:
         fields_value |= st.none()
     return st.builds(graphql.ObjectValueNode, fields=fields_value)
@@ -181,18 +244,21 @@ def subset_of_fields(**all_fields: Field) -> st.SearchStrategy[List[Tuple[str, F
     return st.lists(st.sampled_from(field_pairs), min_size=1, unique_by=lambda x: x[0])
 
 
-def object_field_nodes(name: str, field: graphql.GraphQLInputField) -> st.SearchStrategy[graphql.ObjectFieldNode]:
+def object_field_nodes(
+    context: Context, name: str, field: graphql.GraphQLInputField
+) -> st.SearchStrategy[graphql.ObjectFieldNode]:
     return st.builds(
         partial(graphql.ObjectFieldNode, name=graphql.NameNode(value=name)),
-        value=value_nodes(field.type),
+        value=value_nodes(context, field.type),
     )
 
 
 def list_of_nodes(
+    context: Context,
     items: List[Tuple],
-    strategy: Callable[[str, Field], st.SearchStrategy],
+    strategy: Callable[[Context, str, Field], st.SearchStrategy],
 ) -> st.SearchStrategy[List]:
-    return st.tuples(*(strategy(name, field) for name, field in items)).map(list)
+    return fixed_lists((strategy(context, name, field) for name, field in items))
 
 
 list_of_object_field_nodes = partial(list_of_nodes, strategy=object_field_nodes)

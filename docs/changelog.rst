@@ -7,6 +7,7 @@ Changelog
 **Added**
 
 - Support union types. `#42`_
+- Support interfaces. `#44`_
 
 **Fixed**
 
@@ -86,6 +87,7 @@ Changelog
 .. _0.3.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.0...v0.3.1
 .. _0.3.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.2.0...v0.3.0
 
+.. _#44: https://github.com/Stranger6667/hypothesis-graphql/44
 .. _#42: https://github.com/Stranger6667/hypothesis-graphql/42
 .. _#40: https://github.com/Stranger6667/hypothesis-graphql/40
 .. _#32: https://github.com/Stranger6667/hypothesis-graphql/32
