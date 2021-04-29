@@ -58,11 +58,22 @@ def simple_schema():
     )
 
 
+def validate_query(schema, query):
+    query_ast = graphql.parse(query)
+    errors = graphql.validate(schema, query_ast)
+    assert not errors
+
+
 def assert_schema(schema):
+    if isinstance(schema, str):
+        parsed_schema = graphql.build_schema(schema)
+    else:
+        parsed_schema = schema
+
     @given(query=gql_st.query(schema))
     @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
-        graphql.parse(query)
+        validate_query(parsed_schema, query)
 
     test()
 
@@ -84,10 +95,12 @@ def test_query(query):
 
 
 def test_query_subset(simple_schema):
+    parsed_schema = graphql.build_schema(simple_schema)
+
     @given(query=gql_st.query(simple_schema, fields=["getBooks"]))
     @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
-        graphql.parse(query)
+        validate_query(parsed_schema, query)
         assert "getAuthors" not in query
 
     test()
@@ -145,9 +158,13 @@ def test_arguments(arguments, node_names, notnull):
       getModel({arguments}): Model
     }}"""
 
-    @given(query=gql_st.query(SCHEMA + query_type))
+    schema = SCHEMA + query_type
+    parsed_schema = graphql.build_schema(schema)
+
+    @given(query=gql_st.query(schema))
     @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
+        validate_query(parsed_schema, query)
         for node_name in node_names:
             assert node_name not in query
         if notnull:
@@ -233,9 +250,13 @@ def test_custom_scalar_non_argument():
     # When a custom scalar type is defined
     # And is used in a non-argument position
 
-    @given(query=gql_st.query(CUSTOM_SCALAR_TEMPLATE.format(query="getObjects: [Object]")))
+    schema = CUSTOM_SCALAR_TEMPLATE.format(query="getObjects: [Object]")
+    parsed_schema = graphql.build_schema(schema)
+
+    @given(query=gql_st.query(schema))
     @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
+        validate_query(parsed_schema, query)
         # Then queries should be generated
         assert "created" in query
 
@@ -250,12 +271,16 @@ def test_custom_scalar_argument_nullable():
 
     num_of_queries = 0
 
-    @given(query=gql_st.query(CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date): Object")))
+    schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date): Object")
+    parsed_schema = graphql.build_schema(schema)
+
+    @given(query=gql_st.query(schema))
     @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
         nonlocal num_of_queries
 
         num_of_queries += 1
+        validate_query(parsed_schema, query)
         assert "getByDate {" in query
 
     test()
@@ -283,9 +308,11 @@ def test_no_surrogates():
         hello(user: String!): String
     }
     """
+    parsed_schema = graphql.build_schema(schema)
 
     @given(query=gql_st.query(schema))
     def test(query):
+        validate_query(parsed_schema, query)
         document = graphql.parse(query)
         argument_node = document.definitions[0].selection_set.selections[0].arguments[0]
         assume(argument_node.name.value == "user")
