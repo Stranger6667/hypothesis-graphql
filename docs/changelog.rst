@@ -12,6 +12,7 @@ Changelog
 **Fixed**
 
 - Generate only 32-bit signed integers for the ``Int`` type. `#40`_
+- Always generate required fields in argument types. `#46`_
 
 `0.4.2`_ - 2021-04-21
 ---------------------
@@ -87,6 +88,7 @@ Changelog
 .. _0.3.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.0...v0.3.1
 .. _0.3.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.2.0...v0.3.0
 
+.. _#46: https://github.com/Stranger6667/hypothesis-graphql/46
 .. _#44: https://github.com/Stranger6667/hypothesis-graphql/44
 .. _#42: https://github.com/Stranger6667/hypothesis-graphql/42
 .. _#40: https://github.com/Stranger6667/hypothesis-graphql/40

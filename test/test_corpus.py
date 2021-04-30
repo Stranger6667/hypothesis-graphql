@@ -1,5 +1,6 @@
 import json
 
+import graphql
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
@@ -43,4 +44,8 @@ def get_names(corpus):
 @given(data=st.data())
 def test_corpus(data, name):
     schema = schemas[name]
-    data.draw(gql_st.query(schema))
+    query = data.draw(gql_st.query(schema))
+    parsed_schema = graphql.build_schema(schema)
+    query_ast = graphql.parse(query)
+    errors = graphql.validate(parsed_schema, query_ast)
+    assert not errors

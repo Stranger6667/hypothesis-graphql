@@ -33,6 +33,10 @@ input QueryInput {
   ne: String
 }
 
+input RequiredInput {
+  eq: Float!,
+}
+
 input NestedQueryInput {
   code: QueryInput
 }
@@ -167,6 +171,7 @@ def test_query_from_graphql_schema():
         ("contain: [[Int]]", ("ListValueNode", "IntValueNode")),
         ("contain: [[Int]!]", ("ListValueNode", "IntValueNode")),
         ("contains: QueryInput", ("ObjectValueNode",)),
+        ("contains: RequiredInput", ("ObjectValueNode",)),
         ("contains: NestedQueryInput", ("ObjectValueNode",)),
     ),
 )
