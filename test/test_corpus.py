@@ -1,6 +1,5 @@
 import json
 
-import graphql
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
@@ -22,6 +21,7 @@ SCHEMAS_WITH_CUSTOM_SCALARS = {
     "TravelgateX",
     "HIVDB",
     "Contentful",
+    "Universe",
 }
 
 
@@ -42,10 +42,7 @@ def get_names(corpus):
     max_examples=5,
 )
 @given(data=st.data())
-def test_corpus(data, name):
+def test_corpus(data, name, validate_query):
     schema = schemas[name]
     query = data.draw(gql_st.query(schema))
-    parsed_schema = graphql.build_schema(schema)
-    query_ast = graphql.parse(query)
-    errors = graphql.validate(parsed_schema, query_ast)
-    assert not errors
+    validate_query(schema, query)
