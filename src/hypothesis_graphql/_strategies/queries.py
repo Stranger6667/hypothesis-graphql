@@ -53,7 +53,7 @@ def _fields(
     else:
         subset = object_type.fields
     # minimum 1 field, an empty query is not valid
-    return subset_of_fields(**subset).flatmap(lambda f: lists_of_field_nodes(context, f))
+    return subset_of_fields(subset).flatmap(lambda f: lists_of_field_nodes(context, f))
 
 
 make_selection_set_node = partial(graphql.SelectionSetNode, kind="selection_set")
@@ -222,24 +222,37 @@ def lists(
     """Generate a `graphql.ListValueNode`."""
     type_ = type_.of_type
     list_value = st.lists(value_nodes(context, type_))
-    if nullable:
-        list_value |= st.none()
-    return st.builds(graphql.ListValueNode, values=list_value)
+    return primitives.maybe_null(st.builds(graphql.ListValueNode, values=list_value), nullable)
 
 
 def objects(
     context: Context, type_: graphql.GraphQLInputObjectType, nullable: bool = True
 ) -> st.SearchStrategy[graphql.ObjectValueNode]:
     """Generate a `graphql.ObjectValueNode`."""
-    fields_value = subset_of_fields(**type_.fields).flatmap(lambda x: list_of_object_field_nodes(context, x))
-    if nullable:
-        fields_value |= st.none()
-    return st.builds(graphql.ObjectValueNode, fields=fields_value)
+    fields_value = subset_of_fields(type_.fields, force_required=True).flatmap(
+        lambda x: list_of_object_field_nodes(context, x)
+    )
+    return primitives.maybe_null(st.builds(graphql.ObjectValueNode, fields=fields_value), nullable)
 
 
-def subset_of_fields(**all_fields: Field) -> st.SearchStrategy[List[Tuple[str, Field]]]:
+def subset_of_fields(
+    fields: Dict[str, Field], *, force_required: bool = False
+) -> st.SearchStrategy[List[Tuple[str, Field]]]:
     """A helper to select a subset of fields."""
-    field_pairs = sorted(all_fields.items())
+    field_pairs = sorted(fields.items())
+    # if we need to always generate required fields, then return them and extend with a subset of optional fields
+    if force_required:
+        required, optional = [], {}
+        for name, field in field_pairs:
+            # TYPING: `field` is always `GraphQLInputField` as `force_required` equals `True` only with
+            # `GraphQLInputObjectType`. A better solution is to create a separate function
+            if graphql.is_required_input_field(field):  # type: ignore
+                required.append((name, field))
+            else:
+                optional[name] = field
+        if optional:
+            return subset_of_fields(optional).map(lambda p: p + required)
+        return st.just(required)
     # pairs are unique by field name
     return st.lists(st.sampled_from(field_pairs), min_size=1, unique_by=lambda x: x[0])
 
