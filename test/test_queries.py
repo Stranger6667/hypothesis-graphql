@@ -1,7 +1,7 @@
 import graphql
 import pytest
 from graphql import GraphQLNamedType
-from hypothesis import HealthCheck, assume, find, given, settings
+from hypothesis import assume, find, given
 from hypothesis import strategies as st
 
 from hypothesis_graphql import strategies as gql_st
@@ -70,7 +70,7 @@ type Model implements Node {
 """
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def simple_schema():
     return (
         SCHEMA
@@ -81,28 +81,8 @@ def simple_schema():
     )
 
 
-def validate_query(schema, query):
-    query_ast = graphql.parse(query)
-    errors = graphql.validate(schema, query_ast)
-    assert not errors
-
-
-def assert_schema(schema):
-    if isinstance(schema, str):
-        parsed_schema = graphql.build_schema(schema)
-    else:
-        parsed_schema = schema
-
-    @given(query=gql_st.query(schema))
-    @settings(suppress_health_check=[HealthCheck.too_slow])
-    def test(query):
-        validate_query(parsed_schema, query)
-
-    test()
-
-
 @pytest.mark.parametrize(
-    "query",
+    "query_type",
     (
         """type Query {
       getBooks: [Book]
@@ -113,20 +93,18 @@ def assert_schema(schema):
     }""",
     ),
 )
-def test_query(query):
-    assert_schema(SCHEMA + query)
+@given(data=st.data())
+def test_query(data, query_type, validate_query):
+    schema = SCHEMA + query_type
+    query = data.draw(gql_st.query(schema))
+    validate_query(schema, query)
 
 
-def test_query_subset(simple_schema):
-    parsed_schema = graphql.build_schema(simple_schema)
-
-    @given(query=gql_st.query(simple_schema, fields=["getBooks"]))
-    @settings(suppress_health_check=[HealthCheck.too_slow])
-    def test(query):
-        validate_query(parsed_schema, query)
-        assert "getAuthors" not in query
-
-    test()
+@given(data=st.data())
+def test_query_subset(data, simple_schema, validate_query):
+    query = data.draw(gql_st.query(simple_schema, fields=["getBooks"]))
+    validate_query(simple_schema, query)
+    assert "getAuthors" not in query
 
 
 def test_empty_fields(simple_schema):
@@ -139,12 +117,14 @@ def test_wrong_fields(simple_schema):
         gql_st.query(simple_schema, fields=["wrong"])
 
 
-def test_query_from_graphql_schema():
+@given(data=st.data())
+def test_query_from_graphql_schema(data, validate_query):
     query = """type Query {
       getBooksByAuthor(name: String): [Book]
     }"""
     schema = graphql.build_schema(SCHEMA + query)
-    assert_schema(schema)
+    query = data.draw(gql_st.query(schema))
+    validate_query(schema, query)
 
 
 @pytest.mark.parametrize("notnull", (True, False))
@@ -175,7 +155,8 @@ def test_query_from_graphql_schema():
         ("contains: NestedQueryInput", ("ObjectValueNode",)),
     ),
 )
-def test_arguments(arguments, node_names, notnull):
+@given(data=st.data())
+def test_arguments(data, arguments, node_names, notnull, validate_query):
     if notnull:
         arguments += "!"
     query_type = f"""type Query {{
@@ -183,25 +164,19 @@ def test_arguments(arguments, node_names, notnull):
     }}"""
 
     schema = SCHEMA + query_type
-    parsed_schema = graphql.build_schema(schema)
-
-    @given(query=gql_st.query(schema))
-    @settings(suppress_health_check=[HealthCheck.too_slow])
-    def test(query):
-        validate_query(parsed_schema, query)
-        for node_name in node_names:
-            assert node_name not in query
-        if notnull:
-            assert "getModel(" in query
-        parsed = graphql.parse(query)
-        selection = parsed.definitions[0].selection_set.selections[0]
-        if notnull:
-            # there should be one argument if it is not null
-            assert len(selection.arguments) == 1
-        # at least one Model field is selected
-        assert len(selection.selection_set.selections) > 0
-
-    test()
+    query = data.draw(gql_st.query(schema))
+    validate_query(schema, query)
+    for node_name in node_names:
+        assert node_name not in query
+    if notnull:
+        assert "getModel(" in query
+    parsed = graphql.parse(query)
+    selection = parsed.definitions[0].selection_set.selections[0]
+    if notnull:
+        # there should be one argument if it is not null
+        assert len(selection.arguments) == 1
+    # at least one Model field is selected
+    assert len(selection.selection_set.selections) > 0
 
 
 @pytest.mark.parametrize(
@@ -212,8 +187,7 @@ def test_arguments(arguments, node_names, notnull):
     ),
 )
 @given(data=st.data())
-@settings(suppress_health_check=[HealthCheck.too_slow])
-def test_interface(data, query_type):
+def test_interface(data, query_type, validate_query):
     schema = SCHEMA + query_type
     parsed_schema = graphql.build_schema(schema)
     query = data.draw(gql_st.query(schema))
@@ -286,24 +260,19 @@ type Query {{
 """
 
 
-def test_custom_scalar_non_argument():
+@given(data=st.data())
+def test_custom_scalar_non_argument(data, validate_query):
     # When a custom scalar type is defined
     # And is used in a non-argument position
 
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getObjects: [Object]")
-    parsed_schema = graphql.build_schema(schema)
-
-    @given(query=gql_st.query(schema))
-    @settings(suppress_health_check=[HealthCheck.too_slow])
-    def test(query):
-        validate_query(parsed_schema, query)
-        # Then queries should be generated
-        assert "created" in query
-
-    test()
+    query = data.draw(gql_st.query(schema))
+    validate_query(schema, query)
+    # Then queries should be generated
+    assert "created" in query
 
 
-def test_custom_scalar_argument_nullable():
+def test_custom_scalar_argument_nullable(validate_query):
     # When a custom scalar type is defined
     # And is used in an argument position
     # And is nullable
@@ -312,15 +281,13 @@ def test_custom_scalar_argument_nullable():
     num_of_queries = 0
 
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date): Object")
-    parsed_schema = graphql.build_schema(schema)
 
     @given(query=gql_st.query(schema))
-    @settings(suppress_health_check=[HealthCheck.too_slow])
     def test(query):
         nonlocal num_of_queries
 
         num_of_queries += 1
-        validate_query(parsed_schema, query)
+        validate_query(schema, query)
         assert "getByDate {" in query
 
     test()
@@ -328,35 +295,29 @@ def test_custom_scalar_argument_nullable():
     assert num_of_queries == 1
 
 
-def test_custom_scalar_argument():
+@given(data=st.data())
+def test_custom_scalar_argument(data):
     # When a custom scalar type is defined
     # And is used in an argument position
     # And is not nullable
 
-    @given(query=gql_st.query(CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Object")))
-    def test(query):
-        pass
+    query = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Object")
 
     with pytest.raises(TypeError, match="Non-nullable custom scalar types are not supported as arguments"):
-        test()
+        data.draw(gql_st.query(query))
 
 
-def test_no_surrogates():
+@given(data=st.data())
+def test_no_surrogates(data, validate_query):
     # Unicode surrogates are not supported by GraphQL spec
     schema = """
     type Query {
         hello(user: String!): String
     }
     """
-    parsed_schema = graphql.build_schema(schema)
-
-    @given(query=gql_st.query(schema))
-    def test(query):
-        validate_query(parsed_schema, query)
-        document = graphql.parse(query)
-        argument_node = document.definitions[0].selection_set.selections[0].arguments[0]
-        assume(argument_node.name.value == "user")
-        value = argument_node.value.value
-        value.encode("utf8")
-
-    test()
+    query = data.draw(gql_st.query(schema))
+    document = validate_query(schema, query)
+    argument_node = document.definitions[0].selection_set.selections[0].arguments[0]
+    assume(argument_node.name.value == "user")
+    value = argument_node.value.value
+    value.encode("utf8")
