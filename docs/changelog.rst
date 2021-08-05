@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Fixed**
+
+- Relax dependency on ``attrs``.
+
 `0.5.0`_ - 2021-04-30
 ---------------------
 
