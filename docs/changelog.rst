@@ -13,6 +13,10 @@ Changelog
 
 - Cache parsed GraphQL schemas.
 
+**Performance**
+
+- Avoid using ``st.builds`` in internal strategies. It gives ~65% data generation time reduction in schemas from the test suite.
+
 `0.5.1`_ - 2021-08-05
 ---------------------
 

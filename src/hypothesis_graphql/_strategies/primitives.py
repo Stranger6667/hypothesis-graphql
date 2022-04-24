@@ -25,23 +25,23 @@ def scalar(type_: graphql.GraphQLScalarType, nullable: bool = True) -> st.Search
 
 
 def enum(type_: graphql.GraphQLEnumType, nullable: bool = True) -> st.SearchStrategy[graphql.EnumValueNode]:
-    enum_value = st.sampled_from(list(type_.values))
-    return maybe_null(st.builds(graphql.EnumValueNode, value=enum_value), nullable)
+    value = st.sampled_from(list(type_.values))
+    return maybe_null(value.map(lambda v: graphql.EnumValueNode(value=v)), nullable)
 
 
 def int_(nullable: bool = True) -> st.SearchStrategy[graphql.IntValueNode]:
-    value = st.integers(min_value=MIN_INT, max_value=MAX_INT).map(str)
-    return maybe_null(st.builds(graphql.IntValueNode, value=value), nullable)
+    value = st.integers(min_value=MIN_INT, max_value=MAX_INT)
+    return maybe_null(value.map(lambda v: graphql.IntValueNode(value=str(v))), nullable)
 
 
 def float_(nullable: bool = True) -> st.SearchStrategy[graphql.FloatValueNode]:
-    value = st.floats(allow_infinity=False, allow_nan=False).map(str)
-    return maybe_null(st.builds(graphql.FloatValueNode, value=value), nullable)
+    value = st.floats(allow_infinity=False, allow_nan=False)
+    return maybe_null(value.map(lambda v: graphql.FloatValueNode(value=str(v))), nullable)
 
 
 def string(nullable: bool = True) -> st.SearchStrategy[graphql.StringValueNode]:
     value = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF))
-    return maybe_null(st.builds(graphql.StringValueNode, value=value), nullable)
+    return maybe_null(value.map(lambda v: graphql.StringValueNode(value=v)), nullable)
 
 
 def id_(nullable: bool = True) -> st.SearchStrategy[Union[graphql.StringValueNode, graphql.IntValueNode]]:
@@ -49,7 +49,7 @@ def id_(nullable: bool = True) -> st.SearchStrategy[Union[graphql.StringValueNod
 
 
 def boolean(nullable: bool = True) -> st.SearchStrategy[graphql.BooleanValueNode]:
-    return maybe_null(st.builds(graphql.BooleanValueNode, value=st.booleans()), nullable)
+    return maybe_null(st.booleans().map(lambda v: graphql.BooleanValueNode(value=v)), nullable)
 
 
 def maybe_null(strategy: st.SearchStrategy, nullable: bool) -> st.SearchStrategy:
