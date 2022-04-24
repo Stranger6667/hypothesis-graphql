@@ -6,6 +6,7 @@ from hypothesis import strategies as st
 
 from hypothesis_graphql import strategies as gql_st
 from hypothesis_graphql._strategies.selections import value_nodes
+from hypothesis_graphql.cache import cached_build_schema
 
 
 @pytest.fixture(scope="session")
@@ -60,7 +61,7 @@ def test_query_from_graphql_schema(data, schema, validate_operation):
     query = """type Query {
       getBooksByAuthor(name: String): [Book]
     }"""
-    schema = graphql.build_schema(schema + query)
+    schema = cached_build_schema(schema + query)
     query = data.draw(gql_st.query(schema))
     validate_operation(schema, query)
 
@@ -127,7 +128,7 @@ def test_arguments(data, schema, arguments, node_names, notnull, validate_operat
 @given(data=st.data())
 def test_interface(data, schema, query_type, validate_operation):
     schema = schema + query_type
-    parsed_schema = graphql.build_schema(schema)
+    parsed_schema = cached_build_schema(schema)
     query = data.draw(gql_st.query(schema))
     validate_operation(parsed_schema, query)
 

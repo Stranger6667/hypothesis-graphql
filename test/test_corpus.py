@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, Phase, Verbosity, given, settings
 from hypothesis import strategies as st
 
 from hypothesis_graphql import strategies as gql_st
@@ -37,6 +37,8 @@ def get_names(corpus, predicate=None):
 
 CORPUS_SETTINGS = {
     "suppress_health_check": [HealthCheck.too_slow, HealthCheck.data_too_large, HealthCheck.filter_too_much],
+    "phases": [Phase.generate],
+    "verbosity": Verbosity.quiet,
     "deadline": None,
     "max_examples": 5,
 }

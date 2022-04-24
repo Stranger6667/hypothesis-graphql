@@ -2,10 +2,12 @@ from typing import Dict, Tuple, Union
 
 import graphql
 
+from ..cache import cached_build_schema
+
 
 def maybe_parse_schema(schema: Union[str, graphql.GraphQLSchema]) -> graphql.GraphQLSchema:
     if isinstance(schema, str):
-        return graphql.build_schema(schema)
+        return cached_build_schema(schema)
     return schema
 
 
