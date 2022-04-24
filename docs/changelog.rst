@@ -9,6 +9,10 @@ Changelog
 - Python 3.10 support.
 - Mutations support. `#51`_
 
+**Changed**
+
+- Cache parsed GraphQL schemas.
+
 `0.5.1`_ - 2021-08-05
 ---------------------
 

@@ -61,7 +61,19 @@ Then strategies might be used in this way:
         #   }
         # }
 
-To restrict the set of fields in generated queries use the ``fields`` argument:
+
+    @given(mutation=gql_st.mutations(SCHEMA))
+    def test_mutation(mutation):
+        ...
+        # This mutation might be generated:
+        #
+        # mutation {
+        #   addBook(title: "H4Z\u7869", author: "\u00d2"){
+        #     title
+        #   }
+        # }
+
+To restrict the set of fields in generated operations use the ``fields`` argument:
 
 .. code:: python
 
