@@ -10,7 +10,9 @@ from .selections import selections
 from .validation import maybe_parse_schema, validate_fields
 
 
-def query(schema: Union[str, graphql.GraphQLSchema], fields: Optional[Iterable[str]] = None) -> st.SearchStrategy[str]:
+def queries(
+    schema: Union[str, graphql.GraphQLSchema], fields: Optional[Iterable[str]] = None
+) -> st.SearchStrategy[str]:
     """A strategy for generating valid queries for the given GraphQL schema.
 
     The output query will contain a subset of fields defined in the `Query` type.

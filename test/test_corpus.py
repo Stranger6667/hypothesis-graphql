@@ -49,7 +49,7 @@ CORPUS_SETTINGS = {
 @given(data=st.data())
 def test_corpus(data, name, validate_operation):
     schema = schemas[name]
-    query = data.draw(gql_st.query(schema))
+    query = data.draw(gql_st.queries(schema))
     validate_operation(schema, query)
 
 

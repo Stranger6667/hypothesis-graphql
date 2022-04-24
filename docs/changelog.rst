@@ -17,6 +17,10 @@ Changelog
 
 - Avoid using ``st.builds`` in internal strategies. It gives ~65% data generation time reduction in schemas from the test suite.
 
+**Changed**
+
+- Rename ``strategies.query`` to ``strategies.queries`` and ``strategies.schema`` to ``strategies.schemas``, so they conform with the recommended naming of Hypothesis strategies.
+
 `0.5.1`_ - 2021-08-05
 ---------------------
 
