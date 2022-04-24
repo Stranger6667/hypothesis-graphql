@@ -25,9 +25,9 @@ SCHEMAS_WITH_CUSTOM_SCALARS = {
 }
 
 
-def get_names(corpus):
+def get_names(corpus, predicate=None):
     for name in sorted(corpus):
-        if name in INVALID_SCHEMAS:
+        if name in INVALID_SCHEMAS or (predicate and not predicate(name)):
             continue
         if name in SCHEMAS_WITH_CUSTOM_SCALARS:
             yield pytest.param(name, marks=pytest.mark.xfail(reason="Custom scalars are not supported"))
@@ -35,14 +35,26 @@ def get_names(corpus):
             yield name
 
 
+CORPUS_SETTINGS = {
+    "suppress_health_check": [HealthCheck.too_slow, HealthCheck.data_too_large, HealthCheck.filter_too_much],
+    "deadline": None,
+    "max_examples": 5,
+}
+
+
 @pytest.mark.parametrize("name", get_names(schemas))
-@settings(
-    suppress_health_check=[HealthCheck.too_slow, HealthCheck.data_too_large, HealthCheck.filter_too_much],
-    deadline=None,
-    max_examples=5,
-)
+@settings(**CORPUS_SETTINGS)
 @given(data=st.data())
-def test_corpus(data, name, validate_query):
+def test_corpus(data, name, validate_operation):
     schema = schemas[name]
     query = data.draw(gql_st.query(schema))
-    validate_query(schema, query)
+    validate_operation(schema, query)
+
+
+@pytest.mark.parametrize("name", get_names(schemas, lambda name: "type Mutation" in schemas[name]))
+@settings(**CORPUS_SETTINGS)
+@given(data=st.data())
+def test_corpus_mutations(data, name, validate_operation):
+    schema = schemas[name]
+    mutation = data.draw(gql_st.mutations(schema))
+    validate_operation(schema, mutation)
