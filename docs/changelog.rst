@@ -15,7 +15,7 @@ Changelog
 
 **Performance**
 
-- Avoid using ``st.builds`` in internal strategies. It gives ~65% data generation time reduction in schemas from the test suite.
+- Avoid using ``st.builds`` in internal strategies. It gives ~65% data generation time reduction in schemas from the test suite. `#14`_
 
 **Changed**
 
@@ -124,3 +124,4 @@ Changelog
 .. _#40: https://github.com/Stranger6667/hypothesis-graphql/40
 .. _#32: https://github.com/Stranger6667/hypothesis-graphql/32
 .. _#30: https://github.com/Stranger6667/hypothesis-graphql/30
+.. _#14: https://github.com/Stranger6667/hypothesis-graphql/14
