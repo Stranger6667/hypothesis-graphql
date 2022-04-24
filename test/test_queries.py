@@ -35,25 +35,25 @@ def simple_schema(schema):
 @given(data=st.data())
 def test_query(data, schema, query_type, validate_operation):
     schema = schema + query_type
-    query = data.draw(gql_st.query(schema))
+    query = data.draw(gql_st.queries(schema))
     validate_operation(schema, query)
 
 
 @given(data=st.data())
 def test_query_subset(data, simple_schema, validate_operation):
-    query = data.draw(gql_st.query(simple_schema, fields=["getBooks"]))
+    query = data.draw(gql_st.queries(simple_schema, fields=["getBooks"]))
     validate_operation(simple_schema, query)
     assert "getAuthors" not in query
 
 
 def test_empty_fields(simple_schema):
     with pytest.raises(ValueError, match="If you pass `fields`, it should not be empty"):
-        gql_st.query(simple_schema, fields=[])
+        gql_st.queries(simple_schema, fields=[])
 
 
 def test_wrong_fields(simple_schema):
     with pytest.raises(ValueError, match="Unknown fields: wrong"):
-        gql_st.query(simple_schema, fields=["wrong"])
+        gql_st.queries(simple_schema, fields=["wrong"])
 
 
 @given(data=st.data())
@@ -62,7 +62,7 @@ def test_query_from_graphql_schema(data, schema, validate_operation):
       getBooksByAuthor(name: String): [Book]
     }"""
     schema = cached_build_schema(schema + query)
-    query = data.draw(gql_st.query(schema))
+    query = data.draw(gql_st.queries(schema))
     validate_operation(schema, query)
 
 
@@ -103,7 +103,7 @@ def test_arguments(data, schema, arguments, node_names, notnull, validate_operat
     }}"""
 
     schema = schema + query_type
-    query = data.draw(gql_st.query(schema))
+    query = data.draw(gql_st.queries(schema))
     validate_operation(schema, query)
     for node_name in node_names:
         assert node_name not in query
@@ -129,7 +129,7 @@ def test_arguments(data, schema, arguments, node_names, notnull, validate_operat
 def test_interface(data, schema, query_type, validate_operation):
     schema = schema + query_type
     parsed_schema = cached_build_schema(schema)
-    query = data.draw(gql_st.query(schema))
+    query = data.draw(gql_st.queries(schema))
     validate_operation(parsed_schema, query)
 
 
@@ -160,7 +160,7 @@ def test_interface(data, schema, query_type, validate_operation):
 )
 def test_minimal_queries(query, schema, minimum):
     schema = schema + f"type Query {{ {query} }}"
-    strategy = gql_st.query(schema)
+    strategy = gql_st.queries(schema)
     minimal_query = f"""{{
   getAuthors{minimum} {{
     name
@@ -174,7 +174,7 @@ def test_missing_query():
       name: String
     }"""
     with pytest.raises(ValueError, match="Query type is not defined in the schema"):
-        gql_st.query(schema)
+        gql_st.queries(schema)
 
 
 def test_unknown_type():
@@ -205,7 +205,7 @@ def test_custom_scalar_non_argument(data, validate_operation):
     # And is used in a non-argument position
 
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getObjects: [Object]")
-    query = data.draw(gql_st.query(schema))
+    query = data.draw(gql_st.queries(schema))
     validate_operation(schema, query)
     # Then queries should be generated
     assert "created" in query
@@ -221,7 +221,7 @@ def test_custom_scalar_argument_nullable(validate_operation):
 
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date): Object")
 
-    @given(query=gql_st.query(schema))
+    @given(query=gql_st.queries(schema))
     def test(query):
         nonlocal num_of_queries
 
@@ -243,7 +243,7 @@ def test_custom_scalar_argument(data):
     query = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Object")
 
     with pytest.raises(TypeError, match="Non-nullable custom scalar types are not supported as arguments"):
-        data.draw(gql_st.query(query))
+        data.draw(gql_st.queries(query))
 
 
 @given(data=st.data())
@@ -254,7 +254,7 @@ def test_no_surrogates(data, validate_operation):
         hello(user: String!): String
     }
     """
-    query = data.draw(gql_st.query(schema))
+    query = data.draw(gql_st.queries(schema))
     document = validate_operation(schema, query)
     argument_node = document.definitions[0].selection_set.selections[0].arguments[0]
     assume(argument_node.name.value == "user")

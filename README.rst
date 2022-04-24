@@ -12,8 +12,8 @@ Usage
 
 There are a few strategies for different use cases.
 
-1. Schema generation - ``hypothesis_graphql.strategies.schema()``
-2. Query - ``hypothesis_graphql.strategies.query(schema)``.
+1. Schema generation - ``hypothesis_graphql.strategies.schemas()``
+2. Query - ``hypothesis_graphql.strategies.queries(schema)``.
 3. Mutation - ``hypothesis_graphql.strategies.mutations(schema)``.
 
 Lets take this schema as an example:
@@ -50,7 +50,7 @@ Then strategies might be used in this way:
     SCHEMA = "..."  # the one above
 
 
-    @given(query=gql_st.query(SCHEMA))
+    @given(query=gql_st.queries(SCHEMA))
     def test_query(query):
         ...
         # This query might be generated:
@@ -80,7 +80,7 @@ To restrict the set of fields in generated operations use the ``fields`` argumen
     ...
 
 
-    @given(query=gql_st.query(SCHEMA, fields=["getAuthors"]))
+    @given(query=gql_st.queries(SCHEMA, fields=["getAuthors"]))
     def test_query(query):
         # Only `getAuthors` will be generated
         ...
