@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Added**
+
+- Python 3.10 support.
+
 `0.5.1`_ - 2021-08-05
 ---------------------
 
