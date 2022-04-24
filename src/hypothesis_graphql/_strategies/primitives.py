@@ -6,8 +6,8 @@ from hypothesis import strategies as st
 
 from ..types import ScalarValueNode
 
-MIN_INT = -(2 ** 31)
-MAX_INT = 2 ** 31 - 1
+MIN_INT = -(2**31)
+MAX_INT = 2**31 - 1
 
 
 def scalar(type_: graphql.GraphQLScalarType, nullable: bool = True) -> st.SearchStrategy[ScalarValueNode]:
