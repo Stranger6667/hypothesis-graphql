@@ -10,10 +10,11 @@ Hypothesis strategies for GraphQL schemas, queries and data.
 Usage
 -----
 
-There are two strategies for different use cases.
+There are a few strategies for different use cases.
 
 1. Schema generation - ``hypothesis_graphql.strategies.schema()``
 2. Query - ``hypothesis_graphql.strategies.query(schema)``.
+3. Mutation - ``hypothesis_graphql.strategies.mutations(schema)``.
 
 Lets take this schema as an example:
 
@@ -32,6 +33,11 @@ Lets take this schema as an example:
     type Query {
       getBooks: [Book]
       getAuthors: [Author]
+    }
+
+    type Mutation {
+      addBook(title: String!, author: String!): Book!
+      addAuthor(name: String!): Author!
     }
 
 Then strategies might be used in this way:

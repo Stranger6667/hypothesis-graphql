@@ -7,6 +7,7 @@ Changelog
 **Added**
 
 - Python 3.10 support.
+- Mutations support. `#51`_
 
 `0.5.1`_ - 2021-08-05
 ---------------------
@@ -104,6 +105,7 @@ Changelog
 .. _0.3.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.0...v0.3.1
 .. _0.3.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.2.0...v0.3.0
 
+.. _#51: https://github.com/Stranger6667/hypothesis-graphql/51
 .. _#46: https://github.com/Stranger6667/hypothesis-graphql/46
 .. _#44: https://github.com/Stranger6667/hypothesis-graphql/44
 .. _#42: https://github.com/Stranger6667/hypothesis-graphql/42
