@@ -260,3 +260,47 @@ def test_no_surrogates(data, validate_operation):
     assume(argument_node.name.value == "user")
     value = argument_node.value.value
     value.encode("utf8")
+
+
+@pytest.mark.parametrize(
+    "schema",
+    (
+        """interface Conflict {
+  id: ID
+}
+
+type FloatModel implements Conflict {
+  id: ID,
+  query: Float!
+}
+
+type StringModel implements Conflict {
+  id: ID,
+  query: String!
+}
+
+type Query {
+  getData: Conflict
+}""",
+        """type FloatModel {
+  query: Float!
+}
+type StringModel {
+  query: String!
+}
+
+union Conflict = FloatModel | StringModel
+
+type Query {
+  getData: Conflict
+}""",
+    ),
+    ids=("interface", "union"),
+)
+@given(data=st.data())
+def test_conflicting_field_types(data, validate_operation, schema):
+    # See GH-49
+    # When Query contain types on the same level that have fields with the same name but with different types
+    query = data.draw(gql_st.queries(schema))
+    # Then no invalid queries should be generated
+    validate_operation(schema, query)

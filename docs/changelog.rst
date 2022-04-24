@@ -13,6 +13,10 @@ Changelog
 
 - Cache parsed GraphQL schemas.
 
+**Fixed**
+
+- Do not generate queries with inline fragments that contain fields with the same name, but different types. `#49`_
+
 **Performance**
 
 - Avoid using ``st.builds`` in internal strategies. It gives ~65% data generation time reduction in schemas from the test suite. `#14`_
@@ -118,6 +122,7 @@ Changelog
 .. _0.3.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.2.0...v0.3.0
 
 .. _#51: https://github.com/Stranger6667/hypothesis-graphql/51
+.. _#49: https://github.com/Stranger6667/hypothesis-graphql/49
 .. _#46: https://github.com/Stranger6667/hypothesis-graphql/46
 .. _#44: https://github.com/Stranger6667/hypothesis-graphql/44
 .. _#42: https://github.com/Stranger6667/hypothesis-graphql/42

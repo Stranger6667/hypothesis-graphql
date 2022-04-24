@@ -32,7 +32,7 @@ def unwrap_field_type(field: Field) -> graphql.GraphQLNamedType:
 
 def field_nodes(context: Context, name: str, field: graphql.GraphQLField) -> st.SearchStrategy[graphql.FieldNode]:
     """Generate a single field node with optional children."""
-    return st.tuples(list_of_arguments(context, field.args), selections_for_type(context, field),).map(
+    return st.tuples(list_of_arguments(context, field.args), selections_for_type(context, field)).map(
         lambda tup: graphql.FieldNode(
             name=graphql.NameNode(value=name),
             arguments=tup[0],
@@ -56,8 +56,7 @@ def selections_for_type(
         if not implementations:
             # Shortcut when there are no implementations - take fields from the interface itself
             return selections(context, field_type)
-        variants: List[InterfaceOrObject] = [field_type, *implementations]
-        return unique_by(variants, lambda v: v.name).flatmap(lambda t: interfaces(context, t))
+        return unique_by(implementations, lambda v: v.name).flatmap(lambda t: interfaces(context, field_type, t))
     if isinstance(field_type, graphql.GraphQLUnionType):
         # A union is a set of object types - take a subset of them and generate inline fragments
         return unique_by(field_type.types, lambda m: m.name).flatmap(lambda m: inline_fragments(context, m))
@@ -65,12 +64,17 @@ def selections_for_type(
     return st.none()
 
 
-def interfaces(context: Context, types: List[InterfaceOrObject]) -> st.SearchStrategy[SelectionNodes]:
-    strategies = [
-        inline_fragment(context, type_) if isinstance(type_, graphql.GraphQLObjectType) else selections(context, type_)
-        for type_ in types
-    ]
-    return st.tuples(*strategies).map(flatten).map(list)  # type: ignore
+def interfaces(
+    context: Context, interface: graphql.GraphQLInterfaceType, implementations: List[InterfaceOrObject]
+) -> st.SearchStrategy[SelectionNodes]:
+    """Build query for GraphQL interface type."""
+    # If there are implementations that have fields with the same name but different types
+    # then the resulting query should not have these fields simultaneously
+    strategies, overlapping_fields = collect_fragment_strategies(context, implementations)
+    if overlapping_fields:
+        return compose_interfaces_with_filter(selections(context, interface), strategies, implementations)
+    # No overlapping - safe to choose any subset of fields within the interface itself and any fragment
+    return st.tuples(selections(context, interface), *strategies).map(flatten).map(list)  # type: ignore
 
 
 T = TypeVar("T")
@@ -86,7 +90,80 @@ def flatten(items: Tuple[Union[T, List[T]], ...]) -> Generator[T, None, None]:
 
 def inline_fragments(context: Context, items: List[graphql.GraphQLObjectType]) -> st.SearchStrategy[SelectionNodes]:
     """Create inline fragment nodes for each given item."""
+    # If there are implementations that have fields with the same name but different types
+    # then the resulting query should not have these fields simultaneously
+    strategies, overlapping_fields = collect_fragment_strategies(context, items)
+    if overlapping_fields:
+        return compose_interfaces_with_filter(st.just([]), strategies, items)
+    # No overlapping - safe to choose any subset of fields within the interface itself and any fragment
     return fixed_lists((inline_fragment(context, type_) for type_ in items))
+
+
+def collect_fragment_strategies(
+    context: Context, items: List[graphql.GraphQLObjectType]
+) -> Tuple[List[st.SearchStrategy[graphql.InlineFragmentNode]], bool]:
+    field_types: Dict[str, graphql.GraphQLType] = {}
+    strategies = []
+    has_overlapping_fields = False
+    for impl in items:
+        if not has_overlapping_fields:
+            for name, field in impl.fields.items():
+                if name in field_types:
+                    if field.type != field_types[name]:
+                        # There are fields with the same names but different types
+                        has_overlapping_fields = True
+                else:
+                    field_types[name] = field.type
+        strategies.append(inline_fragment(context, impl))
+    return strategies, has_overlapping_fields
+
+
+def compose_interfaces_with_filter(
+    already_selected: st.SearchStrategy[List],
+    strategies: List[st.SearchStrategy[SelectionNodes]],
+    items: List[graphql.GraphQLObjectType],
+) -> st.SearchStrategy[SelectionNodes]:
+    types_by_name = {impl.name: impl for impl in items}
+
+    @st.composite  # type: ignore
+    def inner(draw: Any) -> SelectionNodes:
+        selection_nodes = draw(already_selected)
+        # Store what fields are already used and their corresponding types
+        seen: Dict[str, graphql.GraphQLType] = {}
+
+        def mark_seen(frag: graphql.InlineFragmentNode) -> None:
+            # Add this fragment's fields to `seen`
+            fragment_type = types_by_name[frag.type_condition.name.value]
+            for selected in frag.selection_set.selections:
+                seen[selected.name.value] = fragment_type.fields[selected.name.value].type
+
+        def add_alias(frag: graphql.InlineFragmentNode) -> graphql.InlineFragmentNode:
+            # Add an alias for all fields that have the same name with already selected ones but a different type
+            fragment_type = types_by_name[frag.type_condition.name.value]
+            for selected in frag.selection_set.selections:
+                field_name = selected.name.value
+                if field_name in seen:
+                    field_type = fragment_type.fields[field_name].type
+                    if seen[field_name] != field_type:
+                        selected.alias = graphql.NameNode(value=f"{field_name}_{make_type_name(field_type)}")
+            return frag
+
+        for strategy in strategies:
+            fragment = draw(strategy.map(add_alias))
+            selection_nodes.append(fragment)
+            mark_seen(fragment)
+        return selection_nodes
+
+    return inner()
+
+
+def make_type_name(type_: graphql.GraphQLType) -> str:
+    """Create a name for a type."""
+    name = ""
+    while isinstance(type_, graphql.GraphQLWrappingType):
+        name += type_.__class__.__name__.replace("GraphQL", "")
+        type_ = type_.of_type
+    return f"{name}{type_.name}"
 
 
 def inline_fragment(
