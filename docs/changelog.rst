@@ -4,6 +4,9 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+`0.6.0`_ - 2022-04-25
+---------------------
+
 **Added**
 
 - Python 3.10 support.
@@ -115,7 +118,8 @@ Invalid queries:
 
 - Initial public release
 
-.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.5.1...HEAD
+.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.6.0...HEAD
+.. _0.6.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.5.1...v0.6.0
 .. _0.5.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.5.0...v0.5.1
 .. _0.5.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.4.2...v0.5.0
 .. _0.4.2: https://github.com/stranger6667/hypothesis-graphql/compare/v0.4.1...v0.4.2
