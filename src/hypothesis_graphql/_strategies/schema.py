@@ -8,7 +8,7 @@ from typing import Any, Optional, Tuple
 from hypothesis import strategies as st
 
 
-def schema(min_definitions: int = 1, max_definitions: int = 10) -> st.SearchStrategy[str]:
+def schemas(min_definitions: int = 1, max_definitions: int = 10) -> st.SearchStrategy[str]:
     # definition+;
     return st.lists(definition(), min_size=min_definitions, max_size=max_definitions).map("\n".join)
 
