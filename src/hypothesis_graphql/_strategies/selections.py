@@ -1,4 +1,5 @@
-from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, TypeVar, Union
+import operator
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
 
 import graphql
 from graphql import is_equal_type
@@ -114,12 +115,15 @@ def selections_for_type(
         if not implementations:
             # Shortcut when there are no implementations - take fields from the interface itself
             return selections(context, field_type)
-        return unique_by(implementations, lambda v: v.name).flatmap(lambda t: interfaces(context, field_type, t))
+        return unique_by(implementations, BY_NAME).flatmap(lambda t: interfaces(context, field_type, t))
     if isinstance(field_type, graphql.GraphQLUnionType):
         # A union is a set of object types - take a subset of them and generate inline fragments
-        return unique_by(field_type.types, lambda m: m.name).flatmap(lambda m: inline_fragments(context, m))
+        return unique_by(field_type.types, BY_NAME).flatmap(lambda m: inline_fragments(context, m))
     # Other types don't have fields
     return st.none()
+
+
+BY_NAME = operator.attrgetter("name")
 
 
 def interfaces(
@@ -132,18 +136,16 @@ def interfaces(
     if overlapping_fields:
         return compose_interfaces_with_filter(selections(context, interface), strategies, implementations)
     # No overlapping - safe to choose any subset of fields within the interface itself and any fragment
-    return st.tuples(selections(context, interface), *strategies).map(flatten).map(list)  # type: ignore
+    return st.tuples(selections(context, interface), *strategies).map(flatten)  # type: ignore
 
 
 T = TypeVar("T")
 
 
-def flatten(items: Tuple[Union[T, List[T]], ...]) -> Generator[T, None, None]:
-    for item in items:
-        if isinstance(item, list):
-            yield from item
-        else:
-            yield item
+def flatten(items: Tuple[List[T], T]) -> List[T]:
+    output = items[0]
+    output.extend(items[1:])
+    return output
 
 
 def inline_fragments(context: Context, items: List[graphql.GraphQLObjectType]) -> st.SearchStrategy[SelectionNodes]:
