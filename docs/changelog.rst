@@ -8,6 +8,7 @@ Changelog
 
 - Python 3.10 support.
 - Mutations support. `#51`_
+- Support PEP-561. `#26`_
 
 **Changed**
 
@@ -134,4 +135,5 @@ Invalid queries:
 .. _#40: https://github.com/Stranger6667/hypothesis-graphql/40
 .. _#32: https://github.com/Stranger6667/hypothesis-graphql/32
 .. _#30: https://github.com/Stranger6667/hypothesis-graphql/30
+.. _#26: https://github.com/Stranger6667/hypothesis-graphql/26
 .. _#14: https://github.com/Stranger6667/hypothesis-graphql/14
