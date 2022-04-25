@@ -20,7 +20,16 @@ def selections(
     else:
         subset = object_type.fields
     # minimum 1 field, an empty query is not valid
-    return subset_of_fields(subset).flatmap(lambda f: list_of_nodes(context, f, strategy=field_nodes))
+    return subset_of_fields(subset).flatmap(list_of_nodes_factory(context, field_nodes))
+
+
+def list_of_nodes_factory(
+    context: Context, strategy: Callable[[Context, str, Field], st.SearchStrategy]
+) -> Callable[[List[Tuple]], st.SearchStrategy[List]]:
+    def factory(items: List[Tuple]) -> st.SearchStrategy[List]:
+        return list_of_nodes(context, items, strategy=strategy)
+
+    return factory
 
 
 def unwrap_field_type(field: Field) -> graphql.GraphQLNamedType:
@@ -34,12 +43,22 @@ def unwrap_field_type(field: Field) -> graphql.GraphQLNamedType:
 def field_nodes(context: Context, name: str, field: graphql.GraphQLField) -> st.SearchStrategy[graphql.FieldNode]:
     """Generate a single field node with optional children."""
     return st.tuples(list_of_arguments(context, field.args), selections_for_type(context, field)).map(
-        lambda tup: graphql.FieldNode(
+        field_node_factory(name)
+    )
+
+
+FieldNodeInput = Tuple[List[graphql.ArgumentNode], Optional[SelectionNodes]]
+
+
+def field_node_factory(name: str) -> Callable[[FieldNodeInput], graphql.FieldNode]:
+    def factory(tup: FieldNodeInput) -> graphql.FieldNode:
+        return graphql.FieldNode(
             name=graphql.NameNode(value=name),
             arguments=tup[0],
             selection_set=graphql.SelectionSetNode(kind="selection_set", selections=add_selection_aliases(tup[1])),
         )
-    )
+
+    return factory
 
 
 def add_selection_aliases(nodes: Optional[SelectionNodes]) -> Optional[SelectionNodes]:
@@ -209,14 +228,21 @@ def inline_fragment(
     context: Context, type_: graphql.GraphQLObjectType
 ) -> st.SearchStrategy[graphql.InlineFragmentNode]:
     """Build `InlineFragmentNode` for the given type."""
-    return selections(context, type_).map(
-        lambda sel: graphql.InlineFragmentNode(
+    return selections(context, type_).map(inline_fragment_node_factory(type_))
+
+
+def inline_fragment_node_factory(
+    type_: graphql.GraphQLObjectType,
+) -> Callable[[SelectionNodes], graphql.InlineFragmentNode]:
+    def factory(nodes: SelectionNodes) -> graphql.InlineFragmentNode:
+        return graphql.InlineFragmentNode(
             type_condition=graphql.NamedTypeNode(
                 name=graphql.NameNode(value=type_.name),
             ),
-            selection_set=graphql.SelectionSetNode(kind="selection_set", selections=sel),
+            selection_set=graphql.SelectionSetNode(kind="selection_set", selections=nodes),
         )
-    )
+
+    return factory
 
 
 def list_of_arguments(
@@ -231,14 +257,15 @@ def list_of_arguments(
             if not isinstance(argument.type, graphql.GraphQLNonNull):
                 continue
             raise TypeError("Non-nullable custom scalar types are not supported as arguments") from exc
-        args.append(
-            argument_strategy.map(
-                # Use `node_name` to prevent the lambda always using the last `name` value in this loop.
-                # See pylint W0640 (cell-var-from-loop)
-                lambda arg, node_name=name: graphql.ArgumentNode(name=graphql.NameNode(value=node_name), value=arg)
-            )
-        )
+        args.append(argument_strategy.map(argument_node_factory(name)))
     return fixed_lists(args)
+
+
+def argument_node_factory(name: str) -> Callable[[graphql.ValueNode], graphql.ArgumentNode]:
+    def factory(value: graphql.ValueNode) -> graphql.ArgumentNode:
+        return graphql.ArgumentNode(name=graphql.NameNode(value=name), value=value)
+
+    return factory
 
 
 def fixed_lists(args: Iterable[st.SearchStrategy[T]]) -> st.SearchStrategy[List[T]]:
@@ -295,7 +322,11 @@ def lists(
     """Generate a `graphql.ListValueNode`."""
     type_ = type_.of_type
     list_value = st.lists(value_nodes(context, type_))
-    return primitives.maybe_null(list_value.map(lambda values: graphql.ListValueNode(values=values)), nullable)
+    return primitives.maybe_null(list_value.map(make_list_value_node), nullable)
+
+
+def make_list_value_node(values: List[graphql.ValueNode]) -> graphql.ListValueNode:
+    return graphql.ListValueNode(values=values)
 
 
 def objects(
@@ -303,9 +334,13 @@ def objects(
 ) -> st.SearchStrategy[graphql.ObjectValueNode]:
     """Generate a `graphql.ObjectValueNode`."""
     fields_value = subset_of_fields(type_.fields, force_required=True).flatmap(
-        lambda fields: list_of_nodes(context, fields, strategy=object_field_nodes)
+        list_of_nodes_factory(context, object_field_nodes)
     )
-    return primitives.maybe_null(fields_value.map(lambda fields: graphql.ObjectValueNode(fields=fields)), nullable)
+    return primitives.maybe_null(fields_value.map(make_object_value_node), nullable)
+
+
+def make_object_value_node(fields: List[graphql.ObjectFieldNode]) -> graphql.ObjectValueNode:
+    return graphql.ObjectValueNode(fields=fields)
 
 
 def subset_of_fields(
@@ -324,7 +359,7 @@ def subset_of_fields(
             else:
                 optional[name] = field
         if optional:
-            return subset_of_fields(optional).map(lambda p: p + required)
+            return subset_of_fields(optional).map(required.__add__)
         return st.just(required)
     # pairs are unique by field name
     return st.lists(st.sampled_from(field_pairs), min_size=1, unique_by=lambda x: x[0])
@@ -333,9 +368,14 @@ def subset_of_fields(
 def object_field_nodes(
     context: Context, name: str, field: graphql.GraphQLInputField
 ) -> st.SearchStrategy[graphql.ObjectFieldNode]:
-    return value_nodes(context, field.type).map(
-        lambda value: graphql.ObjectFieldNode(name=graphql.NameNode(value=name), value=value)
-    )
+    return value_nodes(context, field.type).map(object_field_node_factory(name))
+
+
+def object_field_node_factory(name: str) -> Callable[[graphql.ValueNode], graphql.ObjectFieldNode]:
+    def factory(value: graphql.ValueNode) -> graphql.ObjectFieldNode:
+        return graphql.ObjectFieldNode(name=graphql.NameNode(value=name), value=value)
+
+    return factory
 
 
 def list_of_nodes(

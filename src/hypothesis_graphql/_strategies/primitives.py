@@ -1,5 +1,5 @@
 """Strategies for simple types like scalars or enums."""
-from typing import Union
+from typing import Type, Union
 
 import graphql
 from hypothesis import strategies as st
@@ -26,22 +26,22 @@ def scalar(type_: graphql.GraphQLScalarType, nullable: bool = True) -> st.Search
 
 def enum(type_: graphql.GraphQLEnumType, nullable: bool = True) -> st.SearchStrategy[graphql.EnumValueNode]:
     value = st.sampled_from(list(type_.values))
-    return maybe_null(value.map(lambda v: graphql.EnumValueNode(value=v)), nullable)
+    return maybe_null(value.map(make_enum_node), nullable)
 
 
 def int_(nullable: bool = True) -> st.SearchStrategy[graphql.IntValueNode]:
     value = st.integers(min_value=MIN_INT, max_value=MAX_INT)
-    return maybe_null(value.map(lambda v: graphql.IntValueNode(value=str(v))), nullable)
+    return maybe_null(value.map(make_int_node), nullable)
 
 
 def float_(nullable: bool = True) -> st.SearchStrategy[graphql.FloatValueNode]:
     value = st.floats(allow_infinity=False, allow_nan=False)
-    return maybe_null(value.map(lambda v: graphql.FloatValueNode(value=str(v))), nullable)
+    return maybe_null(value.map(make_float_node), nullable)
 
 
 def string(nullable: bool = True) -> st.SearchStrategy[graphql.StringValueNode]:
     value = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF))
-    return maybe_null(value.map(lambda v: graphql.StringValueNode(value=v)), nullable)
+    return maybe_null(value.map(make_string_node), nullable)
 
 
 def id_(nullable: bool = True) -> st.SearchStrategy[Union[graphql.StringValueNode, graphql.IntValueNode]]:
@@ -49,10 +49,42 @@ def id_(nullable: bool = True) -> st.SearchStrategy[Union[graphql.StringValueNod
 
 
 def boolean(nullable: bool = True) -> st.SearchStrategy[graphql.BooleanValueNode]:
-    return maybe_null(st.booleans().map(lambda v: graphql.BooleanValueNode(value=v)), nullable)
+    return maybe_null(st.booleans().map(make_boolean_node), nullable)
 
 
 def maybe_null(strategy: st.SearchStrategy, nullable: bool) -> st.SearchStrategy:
     if nullable:
         strategy |= st.just(graphql.NullValueNode())
     return strategy
+
+
+# Separate functions to use in `map` and avoid costs of handling lambda
+# constructors are passed as locals to optimize the byte code a little
+
+
+def make_boolean_node(
+    value: bool, BooleanValueNode: Type[graphql.BooleanValueNode] = graphql.BooleanValueNode
+) -> graphql.BooleanValueNode:
+    return BooleanValueNode(value=value)
+
+
+def make_string_node(
+    value: str, StringValueNode: Type[graphql.StringValueNode] = graphql.StringValueNode
+) -> graphql.StringValueNode:
+    return StringValueNode(value=value)
+
+
+def make_float_node(
+    value: float, FloatValueNode: Type[graphql.FloatValueNode] = graphql.FloatValueNode
+) -> graphql.FloatValueNode:
+    return FloatValueNode(value=str(value))
+
+
+def make_int_node(value: int, IntValueNode: Type[graphql.IntValueNode] = graphql.IntValueNode) -> graphql.IntValueNode:
+    return IntValueNode(value=str(value))
+
+
+def make_enum_node(
+    value: str, EnumValueNode: Type[graphql.EnumValueNode] = graphql.EnumValueNode
+) -> graphql.EnumValueNode:
+    return EnumValueNode(value=value)
