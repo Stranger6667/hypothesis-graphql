@@ -9,39 +9,42 @@ from ..types import ScalarValueNode
 MIN_INT = -(2**31)
 MAX_INT = 2**31 - 1
 
+TEXT_STRATEGY = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF))
+
 
 def scalar(type_: graphql.GraphQLScalarType, nullable: bool = True) -> st.SearchStrategy[ScalarValueNode]:
-    if type_.name == "Int":
+    type_name = type_.name
+    if type_name == "Int":
         return int_(nullable)
-    if type_.name == "Float":
+    if type_name == "Float":
         return float_(nullable)
-    if type_.name == "String":
+    if type_name == "String":
         return string(nullable)
-    if type_.name == "ID":
+    if type_name == "ID":
         return id_(nullable)
-    if type_.name == "Boolean":
+    if type_name == "Boolean":
         return boolean(nullable)
     raise TypeError("Custom scalar types are not supported")
 
 
 def enum(type_: graphql.GraphQLEnumType, nullable: bool = True) -> st.SearchStrategy[graphql.EnumValueNode]:
-    value = st.sampled_from(list(type_.values))
-    return maybe_null(value.map(make_enum_node), nullable)
+    values = st.sampled_from(list(type_.values))
+    return maybe_null(values.map(make_enum_node), nullable)
 
 
 def int_(nullable: bool = True) -> st.SearchStrategy[graphql.IntValueNode]:
-    value = st.integers(min_value=MIN_INT, max_value=MAX_INT)
-    return maybe_null(value.map(make_int_node), nullable)
+    values = st.integers(min_value=MIN_INT, max_value=MAX_INT)
+    return maybe_null(values.map(make_int_node), nullable)
 
 
 def float_(nullable: bool = True) -> st.SearchStrategy[graphql.FloatValueNode]:
-    value = st.floats(allow_infinity=False, allow_nan=False)
-    return maybe_null(value.map(make_float_node), nullable)
+    values = st.floats(allow_infinity=False, allow_nan=False)
+    return maybe_null(values.map(make_float_node), nullable)
 
 
 def string(nullable: bool = True) -> st.SearchStrategy[graphql.StringValueNode]:
-    value = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF))
-    return maybe_null(value.map(make_string_node), nullable)
+    values = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF))
+    return maybe_null(values.map(make_string_node), nullable)
 
 
 def id_(nullable: bool = True) -> st.SearchStrategy[Union[graphql.StringValueNode, graphql.IntValueNode]]:

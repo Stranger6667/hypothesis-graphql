@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Performance**
+
+- Improve performance on recent Hypothesis versions.
+
 `0.6.0`_ - 2022-04-25
 ---------------------
 
