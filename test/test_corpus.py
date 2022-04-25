@@ -40,7 +40,7 @@ CORPUS_SETTINGS = {
     "phases": [Phase.generate],
     "verbosity": Verbosity.quiet,
     "deadline": None,
-    "max_examples": 5,
+    "max_examples": 20,
 }
 
 
