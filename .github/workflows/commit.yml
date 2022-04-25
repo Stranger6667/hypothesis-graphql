@@ -14,5 +14,7 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v3.0.2
+        with:
+          fetch-depth: 0
       - name: Run commitsar
         uses: docker://commitsar/commitsar
