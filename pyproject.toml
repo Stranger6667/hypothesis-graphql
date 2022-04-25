@@ -23,6 +23,7 @@ authors = ["Dmitry Dygalo <dadygalo@gmail.com>"]
 readme = "README.rst"
 repository = "https://github.com/Stranger6667/hypothesis-graphql"
 license = "MIT"
+include = ["src/hypothesis_graphql/py.typed"]
 
 [tool.poetry.dependencies]
 python = "^3.6"
