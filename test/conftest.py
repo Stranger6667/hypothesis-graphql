@@ -85,7 +85,9 @@ def validate_operation():
             parsed_schema = schema
         query_ast = graphql.parse(query)
         errors = graphql.validate(parsed_schema, query_ast)
-        assert not errors
+        for error in errors:
+            print(error)
+        assert not errors, query
         return query_ast
 
     return inner

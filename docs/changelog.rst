@@ -15,7 +15,10 @@ Changelog
 
 **Fixed**
 
-- Do not generate queries with inline fragments that contain fields with the same name, but different types. `#49`_
+Invalid queries:
+
+- Fields with the same name, but different types. `#49`_
+- Fields with the same name, and the same arguments that have different enum values. `#57`_
 
 **Performance**
 
@@ -121,6 +124,7 @@ Changelog
 .. _0.3.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.0...v0.3.1
 .. _0.3.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.2.0...v0.3.0
 
+.. _#57: https://github.com/Stranger6667/hypothesis-graphql/57
 .. _#51: https://github.com/Stranger6667/hypothesis-graphql/51
 .. _#49: https://github.com/Stranger6667/hypothesis-graphql/49
 .. _#46: https://github.com/Stranger6667/hypothesis-graphql/46

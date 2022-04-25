@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, Generator, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import graphql
+from graphql import is_equal_type
 from hypothesis import strategies as st
 
 from ..types import Field, InputTypeNode, InterfaceOrObject, SelectionNodes
@@ -36,9 +37,47 @@ def field_nodes(context: Context, name: str, field: graphql.GraphQLField) -> st.
         lambda tup: graphql.FieldNode(
             name=graphql.NameNode(value=name),
             arguments=tup[0],
-            selection_set=graphql.SelectionSetNode(kind="selection_set", selections=tup[1]),
+            selection_set=graphql.SelectionSetNode(kind="selection_set", selections=add_selection_aliases(tup[1])),
         )
     )
+
+
+def add_selection_aliases(nodes: Optional[SelectionNodes]) -> Optional[SelectionNodes]:
+    """Add aliases to fields that have conflicting argument types."""
+    if nodes and len(nodes) > 1:
+        seen: Dict[Tuple[str, str], List] = {}
+        for node in nodes:
+            maybe_add_alias_to_node(node, seen)
+    return nodes
+
+
+def maybe_add_alias_to_node(node: graphql.SelectionNode, seen: Dict[Tuple[str, str], List]) -> None:
+    if isinstance(node, graphql.FieldNode):
+        maybe_add_alias(node, node.arguments, seen)
+        if node.selection_set.selections:
+            for selection in node.selection_set.selections:
+                maybe_add_alias_to_node(selection, seen)
+    if isinstance(node, graphql.InlineFragmentNode):
+        for selection in node.selection_set.selections:
+            maybe_add_alias(selection, selection.arguments, seen)
+            if selection.selection_set.selections:
+                for sub_selection in selection.selection_set.selections:
+                    maybe_add_alias_to_node(sub_selection, seen)
+
+
+def maybe_add_alias(
+    field_node: graphql.FieldNode, arguments: List[graphql.ArgumentNode], seen: Dict[Tuple[str, str], List]
+) -> None:
+    for argument in arguments:
+        key = (field_node.name.value, argument.name.value)
+        value = argument.value
+        if key in seen:
+            # Simply add an alias, the values could be the same, so it not technically necessary, but this is safe
+            # and simpler, but a bit reduces the possible input variety
+            field_node.alias = graphql.NameNode(value=f"{field_node.name.value}_{len(seen[key])}")
+            seen[key].append(value)
+        else:
+            seen[key] = [value]
 
 
 def selections_for_type(
@@ -109,7 +148,7 @@ def collect_fragment_strategies(
         if not has_overlapping_fields:
             for name, field in impl.fields.items():
                 if name in field_types:
-                    if field.type != field_types[name]:
+                    if not is_equal_type(field.type, field_types[name]):
                         # There are fields with the same names but different types
                         has_overlapping_fields = True
                 else:
@@ -135,7 +174,7 @@ def compose_interfaces_with_filter(
             # Add this fragment's fields to `seen`
             fragment_type = types_by_name[frag.type_condition.name.value]
             for selected in frag.selection_set.selections:
-                seen[selected.name.value] = fragment_type.fields[selected.name.value].type
+                seen.setdefault(selected.name.value, fragment_type.fields[selected.name.value].type)
 
         def add_alias(frag: graphql.InlineFragmentNode) -> graphql.InlineFragmentNode:
             # Add an alias for all fields that have the same name with already selected ones but a different type
@@ -144,7 +183,7 @@ def compose_interfaces_with_filter(
                 field_name = selected.name.value
                 if field_name in seen:
                     field_type = fragment_type.fields[field_name].type
-                    if seen[field_name] != field_type:
+                    if not is_equal_type(seen[field_name], field_type):
                         selected.alias = graphql.NameNode(value=f"{field_name}_{make_type_name(field_type)}")
             return frag
 
