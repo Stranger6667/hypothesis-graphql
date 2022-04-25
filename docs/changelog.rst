@@ -13,10 +13,6 @@ Changelog
 - Mutations support. `#51`_
 - Support PEP-561. `#26`_
 
-**Changed**
-
-- Cache parsed GraphQL schemas.
-
 **Fixed**
 
 Invalid queries:
@@ -32,6 +28,7 @@ Invalid queries:
 
 - Rename ``strategies.query`` to ``strategies.queries`` and ``strategies.schema`` to ``strategies.schemas``, so they conform with the recommended naming of Hypothesis strategies.
   Old names are preserved for backward-compatibility.
+- Cache parsed GraphQL schemas.
 
 `0.5.1`_ - 2021-08-05
 ---------------------
