@@ -4,6 +4,7 @@ from typing import Tuple, Union
 
 import graphql
 from hypothesis import strategies as st
+from hypothesis.errors import InvalidArgument
 
 from ..types import ScalarValueNode
 from . import factories
@@ -33,7 +34,10 @@ def scalar(type_name: str, nullable: bool = True) -> st.SearchStrategy[ScalarVal
         return id_(nullable)
     if type_name == "Boolean":
         return boolean(nullable)
-    raise TypeError("Custom scalar types are not supported")
+    raise InvalidArgument(
+        f"Scalar {type_name!r} is not supported. "
+        "Provide a Hypothesis strategy via the `custom_scalars` argument to generate it."
+    )
 
 
 def int_(nullable: bool = True) -> st.SearchStrategy[graphql.IntValueNode]:

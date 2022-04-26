@@ -7,6 +7,7 @@ import attr
 import graphql
 from graphql import is_equal_type
 from hypothesis import strategies as st
+from hypothesis.errors import InvalidArgument
 from hypothesis.strategies._internal.utils import cacheable
 
 from ..types import AstPrinter, CustomScalars, Field, InputTypeNode, InterfaceOrObject, SelectionNodes
@@ -178,10 +179,11 @@ class GraphQLStrategy:
         for name, argument in arguments.items():
             try:
                 argument_strategy = self.values(argument.type)
-            except TypeError as exc:
+            except InvalidArgument:
                 if not isinstance(argument.type, graphql.GraphQLNonNull):
+                    # Skip custom scalar if it is nullable
                     continue
-                raise TypeError("Non-nullable custom scalar types are not supported as arguments") from exc
+                raise
             args.append(argument_strategy.map(factories.argument(name)))
         return st.tuples(*args).map(list)
 

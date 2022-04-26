@@ -63,7 +63,7 @@ def test_custom_scalar_argument(data):
 
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Object")
 
-    with pytest.raises(TypeError, match="Non-nullable custom scalar types are not supported as arguments"):
+    with pytest.raises(TypeError, match="Scalar 'Date' is not supported"):
         data.draw(gql_st.queries(schema))
 
 
