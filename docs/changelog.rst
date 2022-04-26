@@ -4,6 +4,9 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+`0.7.1`_ - 2022-04-27
+---------------------
+
 **Added**
 
 - ``hypothesis_graphql.nodes`` module to simplify working with custom scalars.
@@ -143,7 +146,8 @@ Invalid queries:
 
 - Initial public release
 
-.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.7.0...HEAD
+.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.7.1...HEAD
+.. _0.7.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.7.0...v0.7.1
 .. _0.7.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.6.1...v0.7.0
 .. _0.6.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.6.0...v0.6.1
 .. _0.6.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.5.1...v0.6.0
