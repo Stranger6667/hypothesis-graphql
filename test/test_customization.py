@@ -14,6 +14,12 @@ scalar Date
 type Object {{
   created: Date
 }}
+
+input QueryInput {{
+  created: Date
+  id: String!
+}}
+
 type Query {{
   {query}
 }}
@@ -68,7 +74,31 @@ def test_custom_scalar_argument(data):
 
 
 @given(data=st.data())
-def test_custom_scalar_field(data):
+@pytest.mark.parametrize("other_type", ("String!", "String"))
+def test_custom_scalar_nested_argument(data, validate_operation, other_type):
+    # When a custom scalar type is defined
+    # And is used as a field inside an input type
+    # And is nullable
+
+    schema = f"""
+scalar Date
+
+input QueryInput {{
+  created: Date
+  id: {other_type}
+}}
+
+type Query {{
+  getByDate(created: QueryInput!): Int
+}}"""
+
+    # Then it could be skipped
+    query = data.draw(gql_st.queries(schema))
+    validate_operation(schema, query)
+
+
+@given(data=st.data())
+def test_custom_scalar_field(data, validate_operation):
     # When a custom scalar type is defined
     # And is used in a field position
     # And is not nullable
@@ -83,25 +113,27 @@ def test_custom_scalar_field(data):
     }
     """
     # Then query should be generated without errors
+    query = data.draw(gql_st.queries(schema))
+    validate_operation(schema, query)
     assert (
-        data.draw(gql_st.queries(schema))
+        query.strip()
         == """{
   getObject {
     created
   }
-}
-"""
+}"""
     )
 
 
 @given(data=st.data())
-def test_custom_scalar_registered(data):
+def test_custom_scalar_registered(data, validate_operation):
     # When the user registered a custom strategy for a scalar
     # Then it should generate valid queries
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Int")
     expected = "EXAMPLE"
 
     query = data.draw(gql_st.queries(schema, custom_scalars={"Date": st.just(expected).map(factories.string)}))
+    validate_operation(schema, query)
     assert f'getByDate(created: "{expected}")' in query
 
 

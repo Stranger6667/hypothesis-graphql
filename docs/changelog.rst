@@ -9,6 +9,10 @@ Changelog
 - Support for custom query printers. `#21`_
 - Support for custom scalars. `#22`_
 
+**Changed**
+
+- Do not generate fields inside inputs if they have custom scalar types. `#38`_
+
 **Performance**
 
 - Additional strategy cache.
@@ -151,6 +155,7 @@ Invalid queries:
 .. _#44: https://github.com/Stranger6667/hypothesis-graphql/44
 .. _#42: https://github.com/Stranger6667/hypothesis-graphql/42
 .. _#40: https://github.com/Stranger6667/hypothesis-graphql/40
+.. _#38: https://github.com/Stranger6667/hypothesis-graphql/38
 .. _#32: https://github.com/Stranger6667/hypothesis-graphql/32
 .. _#30: https://github.com/Stranger6667/hypothesis-graphql/30
 .. _#26: https://github.com/Stranger6667/hypothesis-graphql/26
