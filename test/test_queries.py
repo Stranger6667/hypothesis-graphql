@@ -1,7 +1,7 @@
 import graphql
 import pytest
 from graphql import GraphQLNamedType
-from hypothesis import Phase, assume, find, given, settings
+from hypothesis import assume, find, given, settings
 from hypothesis import strategies as st
 
 from hypothesis_graphql import strategies as gql_st
@@ -376,3 +376,15 @@ def test_conflicting_field_types(data, validate_operation, schema):
     query = data.draw(gql_st.queries(schema))
     # Then no invalid queries should be generated
     validate_operation(schema, query)
+
+
+def test_custom_printer(simple_schema):
+    def printer(node):
+        return str(node)
+
+    @given(gql_st.queries(simple_schema, print_ast=printer))
+    @settings(max_examples=1)
+    def test(query):
+        assert query == "DocumentNode"
+
+    test()
