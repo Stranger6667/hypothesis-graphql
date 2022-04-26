@@ -68,6 +68,33 @@ def test_custom_scalar_argument(data):
 
 
 @given(data=st.data())
+def test_custom_scalar_field(data):
+    # When a custom scalar type is defined
+    # And is used in a field position
+    # And is not nullable
+    schema = """
+    scalar Date
+
+    type Object {
+      created: Date!
+    }
+    type Query {
+      getObject: Object
+    }
+    """
+    # Then query should be generated without errors
+    assert (
+        data.draw(gql_st.queries(schema))
+        == """{
+  getObject {
+    created
+  }
+}
+"""
+    )
+
+
+@given(data=st.data())
 def test_custom_scalar_registered(data):
     # When the user registered a custom strategy for a scalar
     # Then it should generate valid queries
