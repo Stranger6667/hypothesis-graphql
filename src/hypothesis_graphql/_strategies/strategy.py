@@ -64,7 +64,7 @@ class GraphQLStrategy:
         if isinstance(type_, graphql.GraphQLScalarType):
             type_name = type_.name
             if type_name in self.custom_scalars:
-                return self.custom_scalars[type_name]
+                return primitives.maybe_null(self.custom_scalars[type_name], nullable)
             return primitives.scalar(type_name, nullable)
         if isinstance(type_, graphql.GraphQLEnumType):
             values = tuple(type_.values)
