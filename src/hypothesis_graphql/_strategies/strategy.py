@@ -10,6 +10,7 @@ from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
 from hypothesis.strategies._internal.utils import cacheable
 
+from .. import nodes
 from ..types import AstPrinter, CustomScalars, Field, InputTypeNode, InterfaceOrObject, SelectionNodes
 from . import factories, primitives
 from .ast import make_mutation, make_query
@@ -80,7 +81,7 @@ class GraphQLStrategy:
     def lists(self, type_: graphql.GraphQLList, nullable: bool = True) -> st.SearchStrategy[graphql.ListValueNode]:
         """Generate a `graphql.ListValueNode`."""
         strategy = st.lists(self.values(type_.of_type))
-        return primitives.maybe_null(strategy.map(factories.list_value), nullable)
+        return primitives.maybe_null(strategy.map(nodes.List), nullable)
 
     @instance_cache(lambda type_, nullable=True: (type_.name, nullable))
     def objects(
@@ -89,7 +90,7 @@ class GraphQLStrategy:
         """Generate a `graphql.ObjectValueNode`."""
         fields = {name: field for name, field in type_.fields.items() if self.can_generate_field(field)}
         strategy = subset_of_fields(fields, force_required=True).flatmap(self.lists_of_object_fields)
-        return primitives.maybe_null(strategy.map(factories.object_value), nullable)
+        return primitives.maybe_null(strategy.map(nodes.Object), nullable)
 
     def can_generate_field(self, field: graphql.GraphQLInputField) -> bool:
         """Whether it is possible to generate values for the given field."""
@@ -199,11 +200,7 @@ class GraphQLStrategy:
                     if not isinstance(argument.type, graphql.GraphQLNonNull):
                         # If the type is nullable, then either generate `null` or skip it completely
                         if draw(st.booleans()):
-                            args.append(
-                                graphql.ArgumentNode(
-                                    name=graphql.NameNode(value=name), value=primitives.NULL_VALUE_NODE
-                                )
-                            )
+                            args.append(graphql.ArgumentNode(name=graphql.NameNode(value=name), value=nodes.Null))
                         continue
                     raise
                 args.append(draw(argument_strategy.map(factories.argument(name))))

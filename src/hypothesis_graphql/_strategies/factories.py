@@ -3,7 +3,7 @@
 Most of them exist to avoid using lambdas, which might become expensive in Hypothesis in some cases.
 """
 from functools import lru_cache
-from typing import Callable, List, Optional, Tuple, Type
+from typing import Callable, List, Optional, Tuple
 
 import graphql
 
@@ -52,44 +52,3 @@ def object_field(name: str) -> Callable[[graphql.ValueNode], graphql.ObjectField
         return graphql.ObjectFieldNode(name=graphql.NameNode(value=name), value=value)
 
     return factory
-
-
-def object_value(fields: List[graphql.ObjectFieldNode]) -> graphql.ObjectValueNode:
-    return graphql.ObjectValueNode(fields=fields)
-
-
-def list_value(values: List[graphql.ValueNode]) -> graphql.ListValueNode:
-    return graphql.ListValueNode(values=values)
-
-
-# Boolean & Enum nodes have a limited set of variants, therefore caching is effective in this case
-
-
-@lru_cache()
-def boolean(value: bool) -> graphql.BooleanValueNode:
-    return graphql.BooleanValueNode(value=value)
-
-
-@lru_cache()
-def enum(value: str) -> graphql.EnumValueNode:
-    return graphql.EnumValueNode(value=value)
-
-
-# Other types of nodes are not that cache-efficient.
-# Constructors are passed as locals to optimize the byte code a little
-
-
-def string(
-    value: str, StringValueNode: Type[graphql.StringValueNode] = graphql.StringValueNode
-) -> graphql.StringValueNode:
-    return StringValueNode(value=value)
-
-
-def float_(
-    value: float, FloatValueNode: Type[graphql.FloatValueNode] = graphql.FloatValueNode
-) -> graphql.FloatValueNode:
-    return FloatValueNode(value=str(value))
-
-
-def int_(value: int, IntValueNode: Type[graphql.IntValueNode] = graphql.IntValueNode) -> graphql.IntValueNode:
-    return IntValueNode(value=str(value))

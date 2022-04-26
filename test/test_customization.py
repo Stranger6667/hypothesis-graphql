@@ -5,6 +5,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
 
+from hypothesis_graphql import nodes
 from hypothesis_graphql import strategies as gql_st
 from hypothesis_graphql._strategies import factories
 
@@ -132,7 +133,7 @@ def test_custom_scalar_registered(data, validate_operation):
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Int")
     expected = "EXAMPLE"
 
-    query = data.draw(gql_st.queries(schema, custom_scalars={"Date": st.just(expected).map(factories.string)}))
+    query = data.draw(gql_st.queries(schema, custom_scalars={"Date": st.just(expected).map(nodes.String)}))
     validate_operation(schema, query)
     assert f'getByDate(created: "{expected}")' in query
 

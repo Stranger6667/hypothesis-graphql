@@ -1,26 +1,30 @@
 """Strategies for simple types like scalars or enums."""
 from functools import lru_cache
-from typing import Tuple, Union
+from typing import Tuple, Type, Union
 
 import graphql
 from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
 
+from .. import nodes
 from ..types import ScalarValueNode
-from . import factories
 
 MIN_INT = -(2**31)
 MAX_INT = 2**31 - 1
 
 
-STRING_STRATEGY = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF)).map(
-    factories.string
-)
-INTEGER_STRATEGY = st.integers(min_value=MIN_INT, max_value=MAX_INT).map(factories.int_)
-FLOAT_STRATEGY = st.floats(allow_infinity=False, allow_nan=False).map(factories.float_)
-BOOLEAN_STRATEGY = st.booleans().map(factories.boolean)
-NULL_VALUE_NODE = graphql.NullValueNode()
-NULL_STRATEGY = st.just(NULL_VALUE_NODE)
+# `String` version without extra `str` call
+def _string(
+    value: str, StringValueNode: Type[graphql.StringValueNode] = graphql.StringValueNode
+) -> graphql.StringValueNode:
+    return StringValueNode(value=value)
+
+
+STRING_STRATEGY = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF)).map(_string)
+INTEGER_STRATEGY = st.integers(min_value=MIN_INT, max_value=MAX_INT).map(nodes.Int)
+FLOAT_STRATEGY = st.floats(allow_infinity=False, allow_nan=False).map(nodes.Float)
+BOOLEAN_STRATEGY = st.booleans().map(nodes.Boolean)
+NULL_STRATEGY = st.just(nodes.Null)
 
 
 @lru_cache(maxsize=16)
@@ -69,4 +73,4 @@ def maybe_null(strategy: st.SearchStrategy, nullable: bool) -> st.SearchStrategy
 
 @lru_cache(maxsize=64)
 def enum(values: Tuple[str], nullable: bool = True) -> st.SearchStrategy[graphql.EnumValueNode]:
-    return maybe_null(st.sampled_from(values).map(factories.enum), nullable)
+    return maybe_null(st.sampled_from(values).map(nodes.Enum), nullable)

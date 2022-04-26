@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Added**
+
+- ``hypothesis_graphql.nodes`` module to simplify working with custom scalars.
+
 `0.7.0`_ - 2022-04-26
 ---------------------
 
