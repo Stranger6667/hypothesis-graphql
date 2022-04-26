@@ -9,11 +9,11 @@ from graphql import is_equal_type
 from hypothesis import strategies as st
 from hypothesis.strategies._internal.utils import cacheable
 
-from ..types import AstPrinter, Field, InputTypeNode, InterfaceOrObject, SelectionNodes
+from ..types import AstPrinter, CustomScalars, Field, InputTypeNode, InterfaceOrObject, SelectionNodes
 from . import factories, primitives
 from .ast import make_mutation, make_query
 from .containers import flatten
-from .validation import maybe_parse_schema, validate_fields
+from .validation import maybe_parse_schema, validate_custom_scalars, validate_fields
 
 BY_NAME = operator.attrgetter("name")
 
@@ -41,6 +41,7 @@ class GraphQLStrategy:
     """Strategy for generating various GraphQL nodes."""
 
     schema: graphql.GraphQLSchema = attr.ib()
+    custom_scalars: CustomScalars = attr.ib(factory=dict)
     # As the schema is assumed to be immutable, there are a few strategy caches possible for internal components
     # This is a per-method cache without limits as they are proportionate to the schema size
     _cache: Dict[str, Dict] = attr.ib(factory=dict)
@@ -60,7 +61,10 @@ class GraphQLStrategy:
         type_, nullable = check_nullable(type_)
         # Types without children
         if isinstance(type_, graphql.GraphQLScalarType):
-            return primitives.scalar(type_.name, nullable)
+            type_name = type_.name
+            if type_name in self.custom_scalars:
+                return self.custom_scalars[type_name]
+            return primitives.scalar(type_name, nullable)
         if isinstance(type_, graphql.GraphQLEnumType):
             values = tuple(type_.values)
             return primitives.enum(values, nullable)
@@ -291,11 +295,27 @@ def subset_of_fields(
     return st.lists(st.sampled_from(field_pairs), min_size=1, unique_by=lambda x: x[0])
 
 
+def _make_strategy(
+    schema: graphql.GraphQLSchema,
+    *,
+    type_: graphql.GraphQLObjectType,
+    fields: Optional[Iterable[str]] = None,
+    custom_scalars: Optional[CustomScalars] = None,
+) -> st.SearchStrategy[List[graphql.FieldNode]]:
+    if fields is not None:
+        fields = tuple(fields)
+        validate_fields(fields, type_.fields)
+    if custom_scalars:
+        validate_custom_scalars(custom_scalars)
+    return GraphQLStrategy(schema, custom_scalars or {}).selections(type_, fields=fields)
+
+
 @cacheable  # type: ignore
 def queries(
     schema: Union[str, graphql.GraphQLSchema],
     *,
     fields: Optional[Iterable[str]] = None,
+    custom_scalars: Optional[CustomScalars] = None,
     print_ast: AstPrinter = graphql.print_ast,
 ) -> st.SearchStrategy[str]:
     """A strategy for generating valid queries for the given GraphQL schema.
@@ -304,16 +324,17 @@ def queries(
 
     :param schema: GraphQL schema as a string or `graphql.GraphQLSchema`.
     :param fields: Restrict generated fields to ones in this list.
+    :param custom_scalars: Strategies for generating custom scalars.
     :param print_ast: A function to convert the generated AST to a string.
     """
     parsed_schema = maybe_parse_schema(schema)
     if parsed_schema.query_type is None:
         raise ValueError("Query type is not defined in the schema")
-    if fields is not None:
-        fields = tuple(fields)
-        validate_fields(fields, parsed_schema.query_type.fields)
-    strategy = GraphQLStrategy(parsed_schema)
-    return strategy.selections(parsed_schema.query_type, fields=fields).map(make_query).map(print_ast)
+    return (
+        _make_strategy(parsed_schema, type_=parsed_schema.query_type, fields=fields, custom_scalars=custom_scalars)
+        .map(make_query)
+        .map(print_ast)
+    )
 
 
 @cacheable  # type: ignore
@@ -321,6 +342,7 @@ def mutations(
     schema: Union[str, graphql.GraphQLSchema],
     *,
     fields: Optional[Iterable[str]] = None,
+    custom_scalars: Optional[CustomScalars] = None,
     print_ast: AstPrinter = graphql.print_ast,
 ) -> st.SearchStrategy[str]:
     """A strategy for generating valid mutations for the given GraphQL schema.
@@ -329,13 +351,14 @@ def mutations(
 
     :param schema: GraphQL schema as a string or `graphql.GraphQLSchema`.
     :param fields: Restrict generated fields to ones in this list.
+    :param custom_scalars: Strategies for generating custom scalars.
     :param print_ast: A function to convert the generated AST to a string.
     """
     parsed_schema = maybe_parse_schema(schema)
     if parsed_schema.mutation_type is None:
         raise ValueError("Mutation type is not defined in the schema")
-    if fields is not None:
-        fields = tuple(fields)
-        validate_fields(fields, parsed_schema.mutation_type.fields)
-    strategy = GraphQLStrategy(parsed_schema)
-    return strategy.selections(parsed_schema.mutation_type, fields=fields).map(make_mutation).map(print_ast)
+    return (
+        _make_strategy(parsed_schema, type_=parsed_schema.mutation_type, fields=fields, custom_scalars=custom_scalars)
+        .map(make_mutation)
+        .map(print_ast)
+    )
