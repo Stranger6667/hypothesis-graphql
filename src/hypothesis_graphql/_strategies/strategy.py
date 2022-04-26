@@ -188,17 +188,28 @@ class GraphQLStrategy:
         """Generate a list `graphql.ArgumentNode` for a field."""
         if not arguments:
             return st.just([])
-        args = []
-        for name, argument in arguments.items():
-            try:
-                argument_strategy = self.values(argument.type)
-            except InvalidArgument:
-                if not isinstance(argument.type, graphql.GraphQLNonNull):
-                    # Skip custom scalar if it is nullable
-                    continue
-                raise
-            args.append(argument_strategy.map(factories.argument(name)))
-        return st.tuples(*args).map(list)
+
+        @st.composite  # type: ignore
+        def inner(draw: Any) -> List[graphql.ArgumentNode]:
+            args = []
+            for name, argument in arguments.items():
+                try:
+                    argument_strategy = self.values(argument.type)
+                except InvalidArgument:
+                    if not isinstance(argument.type, graphql.GraphQLNonNull):
+                        # If the type is nullable, then either generate `null` or skip it completely
+                        if draw(st.booleans()):
+                            args.append(
+                                graphql.ArgumentNode(
+                                    name=graphql.NameNode(value=name), value=primitives.NULL_VALUE_NODE
+                                )
+                            )
+                        continue
+                    raise
+                args.append(draw(argument_strategy.map(factories.argument(name))))
+            return args
+
+        return inner()
 
     def selections_for_type(
         self,

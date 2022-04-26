@@ -54,11 +54,11 @@ def test_custom_scalar_argument_nullable(validate_operation):
 
         num_of_queries += 1
         validate_operation(schema, query)
-        assert "getByDate {" in query
+        assert "getByDate {" in query or "getByDate(created: null)" in query
 
     test()
-    # Then only one query should be generated
-    assert num_of_queries == 1
+    # Then only two queries should be generated - no fields, and `created: null`
+    assert num_of_queries == 2
 
 
 @given(data=st.data())
