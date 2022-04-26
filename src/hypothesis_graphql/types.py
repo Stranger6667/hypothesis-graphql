@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Callable, List, Union
 
 import graphql
 
@@ -8,3 +8,4 @@ InputTypeNode = Union[ScalarValueNode, graphql.EnumValueNode, graphql.ListValueN
 Field = Union[graphql.GraphQLField, graphql.GraphQLInputField]
 InterfaceOrObject = Union[graphql.GraphQLObjectType, graphql.GraphQLInterfaceType]
 SelectionNodes = List[graphql.SelectionNode]
+AstPrinter = Callable[[graphql.Node], str]

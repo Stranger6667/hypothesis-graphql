@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Added**
+
+- Support for custom query printers. `#21`_
+
 `0.6.1`_ - 2022-04-26
 ---------------------
 
@@ -145,4 +149,5 @@ Invalid queries:
 .. _#32: https://github.com/Stranger6667/hypothesis-graphql/32
 .. _#30: https://github.com/Stranger6667/hypothesis-graphql/30
 .. _#26: https://github.com/Stranger6667/hypothesis-graphql/26
+.. _#21: https://github.com/Stranger6667/hypothesis-graphql/21
 .. _#14: https://github.com/Stranger6667/hypothesis-graphql/14
