@@ -87,8 +87,21 @@ class GraphQLStrategy:
         self, type_: graphql.GraphQLInputObjectType, nullable: bool = True
     ) -> st.SearchStrategy[graphql.ObjectValueNode]:
         """Generate a `graphql.ObjectValueNode`."""
-        strategy = subset_of_fields(type_.fields, force_required=True).flatmap(self.lists_of_object_fields)
+        fields = {name: field for name, field in type_.fields.items() if self.can_generate_field(field)}
+        strategy = subset_of_fields(fields, force_required=True).flatmap(self.lists_of_object_fields)
         return primitives.maybe_null(strategy.map(factories.object_value), nullable)
+
+    def can_generate_field(self, field: graphql.GraphQLInputField) -> bool:
+        """Whether it is possible to generate values for the given field."""
+        type_ = unwrap_field_type(field)
+        return (
+            # Can generate any non-scalar
+            not isinstance(type_, graphql.GraphQLScalarType)
+            # Default scalars
+            or type_.name in {"Int", "Float", "String", "ID", "Boolean"}
+            # User-provided scalars
+            or type_.name in self.custom_scalars
+        )
 
     def lists_of_object_fields(
         self, items: List[Tuple[str, Field]]
