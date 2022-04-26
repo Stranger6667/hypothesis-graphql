@@ -89,8 +89,8 @@ It is also possible to generate custom scalars. For example, ``Date``:
 
 .. code:: python
 
-    from hypothesis import strategies as st
-    import graphql
+    from hypothesis import strategies as st, given
+    from hypothesis_graphql import strategies as gql_st, nodes
 
     SCHEMA = """
     scalar Date
@@ -107,7 +107,7 @@ It is also possible to generate custom scalars. For example, ``Date``:
             custom_scalars={
                 # Standard scalars work out of the box, for custom ones you need
                 # to pass custom strategies that generate proper AST nodes
-                "Date": st.dates().map(lambda v: graphql.StringValueNode(value=str(v)))
+                "Date": st.dates().map(nodes.String)
             },
         )
     )
@@ -117,6 +117,19 @@ It is also possible to generate custom scalars. For example, ``Date``:
         #  { getByDate(created: "2000-01-01") }
         #
         ...
+
+The ``hypothesis_graphql.nodes`` module includes a few helpers to generate various node types:
+
+- ``String`` -> ``graphql.StringValueNode``
+- ``Float`` -> ``graphql.FloatValueNode``
+- ``Int`` -> ``graphql.IntValueNode``
+- ``Object`` -> ``graphql.ObjectValueNode``
+- ``List`` -> ``graphql.ListValueNode``
+- ``Boolean`` -> ``graphql.BooleanValueNode``
+- ``Enum`` -> ``graphql.EnumValueNode``
+- ``Null`` -> ``graphql.NullValueNode`` (a constant, not a function)
+
+They exist because classes like ``graphql.StringValueNode`` can't be directly used in ``map`` calls due to kwarg-only arguments.
 
 .. |Build| image:: https://github.com/Stranger6667/hypothesis-graphql/workflows/build/badge.svg
    :target: https://github.com/Stranger6667/hypothesis-graphql/actions
