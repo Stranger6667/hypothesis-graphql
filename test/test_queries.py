@@ -5,7 +5,7 @@ from hypothesis import assume, find, given, settings
 from hypothesis import strategies as st
 
 from hypothesis_graphql import strategies as gql_st
-from hypothesis_graphql._strategies.selections import value_nodes
+from hypothesis_graphql._strategies.strategy import GraphQLStrategy
 from hypothesis_graphql.cache import cached_build_schema
 
 
@@ -177,14 +177,16 @@ def test_missing_query():
         gql_st.queries(schema)
 
 
-def test_unknown_type():
+def test_unknown_type(simple_schema):
     # If there will be a new input type in `graphql`
+
+    schema = cached_build_schema(simple_schema)
 
     class NewType(GraphQLNamedType):
         pass
 
     with pytest.raises(TypeError, match="Type NewType is not supported."):
-        value_nodes(None, NewType("Test"))
+        GraphQLStrategy(schema).values(NewType("Test"))
 
 
 CUSTOM_SCALAR_TEMPLATE = """
