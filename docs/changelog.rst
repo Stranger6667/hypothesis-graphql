@@ -8,6 +8,10 @@ Changelog
 
 - Support for custom query printers. `#21`_
 
+**Performance**
+
+- Additional strategy cache.
+
 `0.6.1`_ - 2022-04-26
 ---------------------
 
