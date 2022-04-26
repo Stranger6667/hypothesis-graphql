@@ -12,6 +12,7 @@ Changelog
 **Changed**
 
 - Do not generate fields inside inputs if they have custom scalar types. `#38`_
+- Generate ``null`` for nullable custom scalars in the argument position. `#35`_
 
 **Performance**
 
@@ -156,6 +157,7 @@ Invalid queries:
 .. _#42: https://github.com/Stranger6667/hypothesis-graphql/42
 .. _#40: https://github.com/Stranger6667/hypothesis-graphql/40
 .. _#38: https://github.com/Stranger6667/hypothesis-graphql/38
+.. _#35: https://github.com/Stranger6667/hypothesis-graphql/35
 .. _#32: https://github.com/Stranger6667/hypothesis-graphql/32
 .. _#30: https://github.com/Stranger6667/hypothesis-graphql/30
 .. _#26: https://github.com/Stranger6667/hypothesis-graphql/26

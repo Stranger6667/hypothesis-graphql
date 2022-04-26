@@ -19,7 +19,8 @@ STRING_STRATEGY = st.text(alphabet=st.characters(blacklist_categories=("Cs",), m
 INTEGER_STRATEGY = st.integers(min_value=MIN_INT, max_value=MAX_INT).map(factories.int_)
 FLOAT_STRATEGY = st.floats(allow_infinity=False, allow_nan=False).map(factories.float_)
 BOOLEAN_STRATEGY = st.booleans().map(factories.boolean)
-NULL_STRATEGY = st.just(graphql.NullValueNode())
+NULL_VALUE_NODE = graphql.NullValueNode()
+NULL_STRATEGY = st.just(NULL_VALUE_NODE)
 
 
 @lru_cache(maxsize=16)
