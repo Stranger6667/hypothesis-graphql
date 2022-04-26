@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from hypothesis import HealthCheck, Phase, Verbosity, given, settings
+from hypothesis import HealthCheck, Phase, Verbosity, given, seed, settings
 from hypothesis import strategies as st
 
 from hypothesis_graphql import strategies as gql_st

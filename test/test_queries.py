@@ -189,65 +189,6 @@ def test_unknown_type(simple_schema):
         GraphQLStrategy(schema).values(NewType("Test"))
 
 
-CUSTOM_SCALAR_TEMPLATE = """
-scalar Date
-
-type Object {{
-  created: Date
-}}
-type Query {{
-  {query}
-}}
-"""
-
-
-@given(data=st.data())
-def test_custom_scalar_non_argument(data, validate_operation):
-    # When a custom scalar type is defined
-    # And is used in a non-argument position
-
-    schema = CUSTOM_SCALAR_TEMPLATE.format(query="getObjects: [Object]")
-    query = data.draw(gql_st.queries(schema))
-    validate_operation(schema, query)
-    # Then queries should be generated
-    assert "created" in query
-
-
-def test_custom_scalar_argument_nullable(validate_operation):
-    # When a custom scalar type is defined
-    # And is used in an argument position
-    # And is nullable
-    # And there are no other arguments
-
-    num_of_queries = 0
-
-    schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date): Object")
-
-    @given(query=gql_st.queries(schema))
-    def test(query):
-        nonlocal num_of_queries
-
-        num_of_queries += 1
-        validate_operation(schema, query)
-        assert "getByDate {" in query
-
-    test()
-    # Then only one query should be generated
-    assert num_of_queries == 1
-
-
-@given(data=st.data())
-def test_custom_scalar_argument(data):
-    # When a custom scalar type is defined
-    # And is used in an argument position
-    # And is not nullable
-
-    query = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Object")
-
-    with pytest.raises(TypeError, match="Non-nullable custom scalar types are not supported as arguments"):
-        data.draw(gql_st.queries(query))
-
-
 @given(data=st.data())
 def test_no_surrogates(data, validate_operation):
     # Unicode surrogates are not supported by GraphQL spec

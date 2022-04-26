@@ -50,7 +50,7 @@ Then strategies might be used in this way:
     SCHEMA = "..."  # the one above
 
 
-    @given(query=gql_st.queries(SCHEMA))
+    @given(gql_st.queries(SCHEMA))
     def test_query(query):
         ...
         # This query might be generated:
@@ -62,7 +62,7 @@ Then strategies might be used in this way:
         # }
 
 
-    @given(mutation=gql_st.mutations(SCHEMA))
+    @given(gql_st.mutations(SCHEMA))
     def test_mutation(mutation):
         ...
         # This mutation might be generated:
@@ -73,16 +73,49 @@ Then strategies might be used in this way:
         #   }
         # }
 
+Customization
+-------------
+
 To restrict the set of fields in generated operations use the ``fields`` argument:
 
 .. code:: python
 
-    ...
-
-
-    @given(query=gql_st.queries(SCHEMA, fields=["getAuthors"]))
+    @given(gql_st.queries(SCHEMA, fields=["getAuthors"]))
     def test_query(query):
         # Only `getAuthors` will be generated
+        ...
+
+It is also possible to generate custom scalars. For example, ``Date``:
+
+.. code:: python
+
+    from hypothesis import strategies as st
+    import graphql
+
+    SCHEMA = """
+    scalar Date
+
+    type Query {
+      getByDate(created: Date!): Int
+    }
+    """
+
+
+    @given(
+        gql_st.queries(
+            SCHEMA,
+            custom_scalars={
+                # Standard scalars work out of the box, for custom ones you need
+                # to pass custom strategies that generate proper AST nodes
+                "Date": st.dates().map(lambda v: graphql.StringValueNode(value=str(v)))
+            },
+        )
+    )
+    def test_query(query):
+        # Example:
+        #
+        #  { getByDate(created: "2000-01-01") }
+        #
         ...
 
 .. |Build| image:: https://github.com/Stranger6667/hypothesis-graphql/workflows/build/badge.svg
