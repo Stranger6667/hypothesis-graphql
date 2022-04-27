@@ -18,6 +18,7 @@ from .containers import flatten
 from .validation import maybe_parse_schema, validate_custom_scalars, validate_fields
 
 BY_NAME = operator.attrgetter("name")
+EMPTY_LISTS_STRATEGY = st.builds(list)
 
 
 def instance_cache(key_func: Callable) -> Callable:
@@ -131,7 +132,7 @@ class GraphQLStrategy:
         # then the resulting query should not have these fields simultaneously
         strategies, overlapping_fields = self.collect_fragment_strategies(items)
         if overlapping_fields:
-            return compose_interfaces_with_filter(st.just([]), strategies, self.schema.type_map)
+            return compose_interfaces_with_filter(EMPTY_LISTS_STRATEGY, strategies, self.schema.type_map)
         # No overlapping - safe to choose any subset of fields within the interface itself and any fragment
         return st.tuples(*(self.inline_fragment(type_) for type_ in items)).map(list)
 

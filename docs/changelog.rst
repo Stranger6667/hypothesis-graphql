@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Fixed**
+
+- Duplicated inline fragments that may miss aliases. `#69`_
+
 `0.7.1`_ - 2022-04-27
 ---------------------
 
@@ -161,6 +165,7 @@ Invalid queries:
 .. _0.3.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.0...v0.3.1
 .. _0.3.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.2.0...v0.3.0
 
+.. _#69: https://github.com/Stranger6667/hypothesis-graphql/69
 .. _#57: https://github.com/Stranger6667/hypothesis-graphql/57
 .. _#51: https://github.com/Stranger6667/hypothesis-graphql/51
 .. _#49: https://github.com/Stranger6667/hypothesis-graphql/49
