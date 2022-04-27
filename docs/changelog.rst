@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Added**
+
+- Expose ``validate_scalar_strategy`` in the public API.
+
 `0.8.0`_ - 2022-04-27
 ---------------------
 

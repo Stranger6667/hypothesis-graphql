@@ -1,0 +1,1 @@
+from ._strategies.validation import validate_scalar_strategy
