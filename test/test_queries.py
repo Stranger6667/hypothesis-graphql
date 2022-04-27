@@ -205,115 +205,156 @@ def test_no_surrogates(data, validate_operation):
     value.encode("utf8")
 
 
+ALIASES_INTERFACE_TWO_TYPES = """interface Conflict {
+  id: ID
+}
+
+type FloatModel implements Conflict {
+  id: ID,
+  query: Float!
+}
+
+type StringModel implements Conflict {
+  id: ID,
+  query: String!
+}
+
+type Query {
+  getData: Conflict
+}"""
+ALIASES_MULTIPLE_INTERFACE_OVERLAP = """interface Nullable {
+  value: Float
+}
+interface Another {
+  non_value: Float
+}
+interface NotNullable {
+  value: Float!
+}
+
+type First implements Nullable {
+  value: Float
+}
+
+type Second implements NotNullable & Another {
+  value: Float!
+  non_value: Float
+}
+
+union FirstOrSecond = First | Second
+
+type Query {
+  getData: FirstOrSecond!
+}"""
+ALIASES_INTERFACE_THREE_TYPES = """interface Conflict {
+  id: ID!
+}
+
+type First implements Conflict {
+  id: ID!
+  key: String
+}
+
+type Second implements Conflict {
+  id: ID!
+  key: String
+}
+
+type Third implements Conflict {
+  id: ID!
+  key: [String]
+}
+
+type Query {
+  getData: Conflict
+}"""
+ALIASES_INTERFACE_NESTED_TYPE = """interface Conflict {
+  keywords: [Keyword!]!
+}
+
+type First implements Conflict {
+  keywords: [Keyword!]!
+}
+
+type Keyword {
+  values(first: Int): String!
+}
+
+type Query {
+  getData(input: Int!): Conflict
+}"""
+ALIASES_UNION_RETURN_TYPE = """type FloatModel {
+  query: Float!
+}
+type StringModel {
+  query: String!
+}
+
+union Conflict = FloatModel | StringModel
+
+type Query {
+  getData: Conflict
+}"""
+ALIASES_ARGUMENT_ENUM = """interface Conflict {
+  query(arg: Arg): String!
+}
+
+type FirstModel implements Conflict {
+  query(arg: Arg): String!
+}
+
+type SecondModel implements Conflict {
+  query(arg: Arg): String!
+}
+
+enum Arg {
+  First
+  Second
+}
+
+type Query {
+  getConflict(arg: String!): Conflict!
+}"""
+ALIASES_ARGUMENT_STRING = """interface Conflict {
+  query(arg: String): String!
+}
+
+type FirstModel implements Conflict {
+  query(arg: String): String!
+}
+
+type SecondModel implements Conflict {
+  query(arg: String): String!
+}
+
+type Query {
+  getConflict(arg: String!): Conflict!
+}"""
+
+
 @pytest.mark.parametrize(
     "schema",
     (
-        """interface Conflict {
-          id: ID
-        }
-
-        type FloatModel implements Conflict {
-          id: ID,
-          query: Float!
-        }
-
-        type StringModel implements Conflict {
-          id: ID,
-          query: String!
-        }
-
-        type Query {
-          getData: Conflict
-        }""",
-        """interface Conflict {
-          id: ID!
-        }
-
-        type First implements Conflict {
-          id: ID!
-          key: String
-        }
-
-        type Second implements Conflict {
-          id: ID!
-          key: String
-        }
-
-        type Third implements Conflict {
-          id: ID!
-          key: [String]
-        }
-
-        type Query {
-          getData: Conflict
-        }""",
-        """interface Conflict {
-          keywords: [Keyword!]!
-        }
-
-        type First implements Conflict {
-          keywords: [Keyword!]!
-        }
-
-        type Keyword {
-          values(first: Int): String!
-        }
-
-        type Query {
-          getData(input: Int!): Conflict
-        }""",
-        """type FloatModel {
-          query: Float!
-        }
-        type StringModel {
-          query: String!
-        }
-
-        union Conflict = FloatModel | StringModel
-
-        type Query {
-          getData: Conflict
-        }""",
-        """interface Conflict {
-          query(arg: Arg): String!
-        }
-
-        type FirstModel implements Conflict {
-          query(arg: Arg): String!
-        }
-
-        type SecondModel implements Conflict {
-          query(arg: Arg): String!
-        }
-
-        enum Arg {
-          First
-          Second
-        }
-
-        type Query {
-          getConflict(arg: String!): Conflict!
-        }""",
-        """interface Conflict {
-          query(arg: String): String!
-        }
-
-        type FirstModel implements Conflict {
-          query(arg: String): String!
-        }
-
-        type SecondModel implements Conflict {
-          query(arg: String): String!
-        }
-
-        type Query {
-          getConflict(arg: String!): Conflict!
-        }""",
+        ALIASES_INTERFACE_TWO_TYPES,
+        ALIASES_INTERFACE_THREE_TYPES,
+        ALIASES_INTERFACE_NESTED_TYPE,
+        ALIASES_MULTIPLE_INTERFACE_OVERLAP,
+        ALIASES_UNION_RETURN_TYPE,
+        ALIASES_ARGUMENT_ENUM,
+        ALIASES_ARGUMENT_STRING,
     ),
-    ids=("interface", "interface-multiple-types", "interface-sub-type", "union", "arguments-enum", "arguments-string"),
+    ids=(
+        "interface-two-types",
+        "interface-three-types",
+        "interface-nested-type",
+        "non-interface",
+        "union",
+        "argument-enum",
+        "argument-string",
+    ),
 )
 @given(data=st.data())
-def test_conflicting_field_types(data, validate_operation, schema):
+def test_aliases(data, validate_operation, schema):
     # See GH-49, GH-57
     # When Query contain types on the same level that have fields with the same name but with different types
     query = data.draw(gql_st.queries(schema))
