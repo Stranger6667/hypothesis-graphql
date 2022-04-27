@@ -4,6 +4,9 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+`0.8.1`_ - 2022-04-27
+---------------------
+
 **Added**
 
 - Expose ``validate_scalar_strategy`` in the public API.
@@ -162,7 +165,8 @@ Invalid queries:
 
 - Initial public release
 
-.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.0...HEAD
+.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.1...HEAD
+.. _0.8.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.0...v0.8.1
 .. _0.8.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.7.1...v0.8.0
 .. _0.7.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.7.0...v0.7.1
 .. _0.7.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.6.1...v0.7.0
