@@ -1,13 +1,12 @@
 import re
 
 import pytest
-from hypothesis import given
+from hypothesis import find, given
 from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
 
 from hypothesis_graphql import nodes
 from hypothesis_graphql import strategies as gql_st
-from hypothesis_graphql._strategies import factories
 
 CUSTOM_SCALAR_TEMPLATE = """
 scalar Date
@@ -19,6 +18,10 @@ type Object {{
 input QueryInput {{
   created: Date
   id: String!
+}}
+
+input RequiredQueryInput {{
+  created: Date!
 }}
 
 type Query {{
@@ -62,25 +65,24 @@ def test_custom_scalar_argument_nullable(validate_operation):
     assert num_of_queries == 2
 
 
+@pytest.mark.parametrize("input_type", ("Date", "RequiredQueryInput"))
 @given(data=st.data())
-def test_custom_scalar_argument(data):
+def test_custom_scalar_argument(data, input_type):
     # When a custom scalar type is defined
     # And is used in an argument position
     # And is not nullable
 
-    schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Object")
+    schema = CUSTOM_SCALAR_TEMPLATE.format(query=f"getByDate(created: {input_type}!): Object")
 
     with pytest.raises(TypeError, match="Scalar 'Date' is not supported"):
         data.draw(gql_st.queries(schema))
 
 
-@given(data=st.data())
 @pytest.mark.parametrize("other_type", ("String!", "String"))
-def test_custom_scalar_nested_argument(data, validate_operation, other_type):
+def test_custom_scalar_nested_argument(validate_operation, other_type):
     # When a custom scalar type is defined
     # And is used as a field inside an input type
     # And is nullable
-
     schema = f"""
 scalar Date
 
@@ -94,8 +96,15 @@ type Query {{
 }}"""
 
     # Then it could be skipped
-    query = data.draw(gql_st.queries(schema))
-    validate_operation(schema, query)
+    strategy = gql_st.queries(schema)
+
+    @given(strategy)
+    def test(query):
+        validate_operation(schema, query)
+
+    test()
+    # And "id" is still possible to generate
+    assert find(strategy, lambda x: "id" in x).strip() == '{\n  getByDate(created: {id: ""})\n}'
 
 
 @given(data=st.data())
