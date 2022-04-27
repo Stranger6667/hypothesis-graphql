@@ -19,6 +19,7 @@ from .validation import maybe_parse_schema, validate_custom_scalars, validate_fi
 
 BY_NAME = operator.attrgetter("name")
 EMPTY_LISTS_STRATEGY = st.builds(list)
+BUILT_IN_SCALAR_TYPE_NAMES = {"Int", "Float", "String", "ID", "Boolean"}
 
 
 def instance_cache(key_func: Callable) -> Callable:
@@ -106,7 +107,7 @@ class GraphQLStrategy:
             # Can generate any non-scalar
             not isinstance(type_, graphql.GraphQLScalarType)
             # Default scalars
-            or type_.name in {"Int", "Float", "String", "ID", "Boolean"}
+            or type_.name in BUILT_IN_SCALAR_TYPE_NAMES
             # User-provided scalars
             or type_.name in self.custom_scalars
         )

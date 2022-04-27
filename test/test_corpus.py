@@ -1,62 +1,87 @@
 import json
+import pathlib
 
+import attr
+import graphql
 import pytest
 from hypothesis import HealthCheck, Phase, Verbosity, given, settings
 from hypothesis import strategies as st
 
+from hypothesis_graphql import nodes
 from hypothesis_graphql import strategies as gql_st
+from hypothesis_graphql._strategies.strategy import BUILT_IN_SCALAR_TYPE_NAMES
+from hypothesis_graphql.cache import cached_build_schema
 
-with open("test/corpus-api-guru-catalog.json") as fd:
+HERE = pathlib.Path(__file__).parent
+
+with open(HERE / "corpus-api-guru-catalog.json") as fd:
     schemas = json.load(fd)
 
 INVALID_SCHEMAS = {
     # Error: The directive '@deprecated' can only be used once at this location
     "Gitlab",
 }
-SCHEMAS_WITH_CUSTOM_SCALARS = {
-    "MongoDB Northwind demo",
-    "Bitquery",
-    "MusicBrainz",
-    "Spacex Land",
-    "TravelgateX",
-    "HIVDB",
-    "Contentful",
-    "Universe",
-}
+
+
+@attr.s(slots=True)
+class Schema:
+    raw = attr.ib()
+    custom_scalars = attr.ib()
+
+
+PLACEHOLDER_STRATEGY = st.just("placeholder").map(nodes.String)
+
+
+@pytest.fixture
+def schema(request):
+    raw_schema = schemas[request.param]
+    parsed = cached_build_schema(raw_schema)
+    custom_scalars = {}
+    # Put placeholders for every custom scalar. Their value is pretty much irrelevant here, it is more important to
+    # test query generation, therefore a placeholder will allow these tests to run on schemas that contain custom
+    # scalars
+    for name, type_ in parsed.type_map.items():
+        if name not in BUILT_IN_SCALAR_TYPE_NAMES and isinstance(type_, graphql.GraphQLScalarType):
+            custom_scalars[name] = PLACEHOLDER_STRATEGY
+    return Schema(raw_schema, custom_scalars or None)
 
 
 def get_names(corpus, predicate=None):
     for name in sorted(corpus):
         if name in INVALID_SCHEMAS or (predicate and not predicate(name)):
             continue
-        if name in SCHEMAS_WITH_CUSTOM_SCALARS:
-            yield pytest.param(name, marks=pytest.mark.xfail(reason="Custom scalars are not supported"))
-        else:
-            yield name
+        yield name
 
 
 CORPUS_SETTINGS = {
-    "suppress_health_check": [HealthCheck.too_slow, HealthCheck.data_too_large, HealthCheck.filter_too_much],
+    "suppress_health_check": [
+        HealthCheck.too_slow,
+        HealthCheck.data_too_large,
+        HealthCheck.filter_too_much,
+        HealthCheck.function_scoped_fixture,
+    ],
     "phases": [Phase.generate],
     "verbosity": Verbosity.quiet,
     "deadline": None,
-    "max_examples": 5,
+    "max_examples": 10,
 }
 
 
-@pytest.mark.parametrize("name", get_names(schemas))
+@pytest.mark.parametrize("schema", get_names(schemas), indirect=["schema"])
 @settings(**CORPUS_SETTINGS)
 @given(data=st.data())
-def test_corpus(data, name, validate_operation):
-    schema = schemas[name]
-    query = data.draw(gql_st.queries(schema))
-    validate_operation(schema, query)
+def test_corpus(data, schema: Schema, validate_operation):
+    query = data.draw(gql_st.queries(schema.raw, custom_scalars=schema.custom_scalars))
+    validate_operation(schema.raw, query)
 
 
-@pytest.mark.parametrize("name", get_names(schemas, lambda name: "type Mutation" in schemas[name]))
+@pytest.mark.parametrize(
+    "schema",
+    get_names(schemas, lambda name: "type Mutation {" in schemas[name] and name != "HIVDB"),
+    indirect=["schema"],
+)
 @settings(**CORPUS_SETTINGS)
 @given(data=st.data())
-def test_corpus_mutations(data, name, validate_operation):
-    schema = schemas[name]
-    mutation = data.draw(gql_st.mutations(schema))
-    validate_operation(schema, mutation)
+def test_corpus_mutations(data, schema: Schema, validate_operation):
+    mutation = data.draw(gql_st.mutations(schema.raw, custom_scalars=schema.custom_scalars))
+    validate_operation(schema.raw, mutation)
