@@ -89,7 +89,13 @@ class GraphQLStrategy:
         self, type_: graphql.GraphQLInputObjectType, nullable: bool = True
     ) -> st.SearchStrategy[graphql.ObjectValueNode]:
         """Generate a `graphql.ObjectValueNode`."""
-        fields = {name: field for name, field in type_.fields.items() if self.can_generate_field(field)}
+        fields = {
+            name: field
+            for name, field in type_.fields.items()
+            # Generate optional fields that are possible to generate and all required fields.
+            # If a required field is not possible to generate, then it will fail deeper anyway
+            if self.can_generate_field(field) or graphql.is_required_input_field(field)
+        }
         strategy = subset_of_fields(fields, force_required=True).flatmap(self.lists_of_object_fields)
         return primitives.maybe_null(strategy.map(nodes.Object), nullable)
 

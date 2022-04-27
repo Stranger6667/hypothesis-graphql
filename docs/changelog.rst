@@ -7,6 +7,7 @@ Changelog
 **Fixed**
 
 - Duplicated inline fragments that may miss aliases. `#69`_
+- Queries missing required fields in their inputs when these fields are custom scalars.
 
 `0.7.1`_ - 2022-04-27
 ---------------------
