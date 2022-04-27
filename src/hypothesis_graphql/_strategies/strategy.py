@@ -50,7 +50,9 @@ class GraphQLStrategy:
     # This is a per-method cache without limits as they are proportionate to the schema size
     _cache: Dict[str, Dict] = attr.ib(factory=dict)
 
-    def values(self, type_: graphql.GraphQLInputType) -> st.SearchStrategy[InputTypeNode]:
+    def values(
+        self, type_: graphql.GraphQLInputType, default: Optional[graphql.ValueNode] = None
+    ) -> st.SearchStrategy[InputTypeNode]:
         """Generate value nodes of a type, that corresponds to the input type.
 
         They correspond to all `GraphQLInputType` variants:
@@ -67,23 +69,25 @@ class GraphQLStrategy:
         if isinstance(type_, graphql.GraphQLScalarType):
             type_name = type_.name
             if type_name in self.custom_scalars:
-                return primitives.maybe_null(self.custom_scalars[type_name], nullable)
-            return primitives.scalar(type_name, nullable)
+                return primitives.custom(self.custom_scalars[type_name], nullable, default=default)
+            return primitives.scalar(type_name, nullable, default=default)
         if isinstance(type_, graphql.GraphQLEnumType):
             values = tuple(type_.values)
-            return primitives.enum(values, nullable)
+            return primitives.enum(values, nullable, default=default)
         # Types with children
         if isinstance(type_, graphql.GraphQLList):
-            return self.lists(type_, nullable)
+            return self.lists(type_, nullable, default=default)
         if isinstance(type_, graphql.GraphQLInputObjectType):
             return self.objects(type_, nullable)
         raise TypeError(f"Type {type_.__class__.__name__} is not supported.")
 
-    @instance_cache(lambda type_, nullable=True: (make_type_name(type_), nullable))
-    def lists(self, type_: graphql.GraphQLList, nullable: bool = True) -> st.SearchStrategy[graphql.ListValueNode]:
+    @instance_cache(lambda type_, nullable=True, default=None: (make_type_name(type_), nullable, default))
+    def lists(
+        self, type_: graphql.GraphQLList, nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    ) -> st.SearchStrategy[graphql.ListValueNode]:
         """Generate a `graphql.ListValueNode`."""
         strategy = st.lists(self.values(type_.of_type))
-        return primitives.maybe_null(strategy.map(nodes.List), nullable)
+        return primitives.list_(strategy, nullable, default=default)
 
     @instance_cache(lambda type_, nullable=True: (type_.name, nullable))
     def objects(
@@ -113,11 +117,16 @@ class GraphQLStrategy:
         )
 
     def lists_of_object_fields(
-        self, items: List[Tuple[str, Field]]
+        self, items: List[Tuple[str, graphql.GraphQLInputField]]
     ) -> st.SearchStrategy[List[graphql.ObjectFieldNode]]:
-        return st.tuples(*(self.values(field.type).map(factories.object_field(name)) for name, field in items)).map(
-            list
-        )
+        return st.tuples(
+            *(
+                self.values(field.type, field.ast_node.default_value if field.ast_node is not None else None).map(
+                    factories.object_field(name)
+                )
+                for name, field in items
+            )
+        ).map(list)
 
     @instance_cache(lambda interface, implementations: (interface.name, tuple(impl.name for impl in implementations)))
     def interfaces(
@@ -202,8 +211,9 @@ class GraphQLStrategy:
         def inner(draw: Any) -> List[graphql.ArgumentNode]:
             args = []
             for name, argument in arguments.items():
+                default = argument.ast_node.default_value if argument.ast_node is not None else None
                 try:
-                    argument_strategy = self.values(argument.type)
+                    argument_strategy = self.values(argument.type, default=default)
                 except InvalidArgument:
                     if not isinstance(argument.type, graphql.GraphQLNonNull):
                         # If the type is nullable, then either generate `null` or skip it completely
@@ -305,8 +315,8 @@ def compose_interfaces_with_filter(
 
 
 def subset_of_fields(
-    fields: Dict[str, Field], *, force_required: bool = False
-) -> st.SearchStrategy[List[Tuple[str, Field]]]:
+    fields: Dict[str, graphql.GraphQLInputField], *, force_required: bool = False
+) -> st.SearchStrategy[List[Tuple[str, graphql.GraphQLInputField]]]:
     """A helper to select a subset of fields."""
     field_pairs = sorted(fields.items())
     # if we need to always generate required fields, then return them and extend with a subset of optional fields

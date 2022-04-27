@@ -4,6 +4,7 @@ from graphql import GraphQLNamedType
 from hypothesis import assume, find, given, settings
 from hypothesis import strategies as st
 
+from hypothesis_graphql import nodes
 from hypothesis_graphql import strategies as gql_st
 from hypothesis_graphql._strategies.strategy import GraphQLStrategy
 from hypothesis_graphql.cache import cached_build_schema
@@ -372,3 +373,83 @@ def test_custom_printer(simple_schema):
         assert query == "DocumentNode"
 
     test()
+
+
+@pytest.mark.parametrize(
+    "type_name, default",
+    (
+        ("String!", '"foo"'),
+        ("[String!]", '["foo"]'),
+        ("[String!]!", '["foo"]'),
+        ("String", "null"),
+        ("ID!", "4432841242"),
+        ("ID!", '"Foo"'),
+        ("[ID!]", '["Foo"]'),
+        ("[ID!]", '["Foo", 42]'),
+        ("Int!", "4432841"),
+        ("[Int!]", "[4432841]"),
+        ("Float!", "4432841242.123"),
+        ("[Float!]", "[4432841242.123]"),
+        ("Date!", '"2022-04-27"'),
+        ("[Date!]", '["2022-04-27"]'),
+        # These are kind of useless, but covers some code path
+        ("Boolean!", "true"),
+        ("Color", "null"),
+        ("Color!", "GREEN"),
+        ("[Color!]", "[GREEN]"),
+        ("[Color!]", "null"),
+    ),
+)
+@pytest.mark.parametrize(
+    "format_kwargs",
+    (
+        lambda x: {
+            "inner_type_name": x["type_name"],
+            "inner_default": x["default"],
+            "outer_type_name": x["type_name"],
+            "outer_default": x["default"],
+        },
+        lambda x: {
+            "inner_type_name": x["type_name"],
+            "inner_default": x["default"],
+            "outer_type_name": "InputData!",
+            "outer_default": f'{{ inner: {x["default"]} }}',
+        },
+    ),
+)
+def test_default_values(validate_operation, type_name, default, format_kwargs):
+    # When the input schema contains nodes with default values
+    schema = """
+scalar Date
+
+enum Color {{
+  RED
+  GREEN
+  BLUE
+}}
+
+input InputData {{
+  inner: {inner_type_name} = {inner_default},
+}}
+
+type Query {{
+  getValue(arg: {outer_type_name} = {outer_default}): Int!
+}}
+    """.format(
+        **format_kwargs({"type_name": type_name, "default": default})
+    )
+    strategy = gql_st.queries(schema, custom_scalars={"Date": st.just("2022-04-26").map(nodes.String)})
+    # Then these default values should be used in generated queries
+
+    all_valid = True
+
+    def validate_and_find(query):
+        nonlocal all_valid
+        try:
+            validate_operation(schema, query)
+        except AssertionError:
+            all_valid = False
+        return default in query
+
+    find(strategy, validate_and_find)
+    assert all_valid
