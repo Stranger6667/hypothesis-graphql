@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "hypothesis-graphql"
-version = "0.8.2"
-description = "Hypothesis strategies for GraphQL schemas and queries"
+version = "0.9.0"
+description = "Hypothesis strategies for GraphQL queries and mutations"
 keywords = ["hypothesis", "graphql", "testing"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Framework :: Hypothesis",
     "Intended Audience :: Developers",

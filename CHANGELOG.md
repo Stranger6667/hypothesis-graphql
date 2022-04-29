@@ -2,6 +2,8 @@
 
 ## [Unreleased] - TBD
 
+## [0.9.0] - 2022-04-29
+
 ### Added
 
 - The `from_schema` function which takes a GraphQL schema and returns a Hypothesis strategy for defined queries and mutations.
@@ -164,7 +166,8 @@ Invalid queries:
 
 - Initial public release
 
-[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.7.1...v0.8.0
