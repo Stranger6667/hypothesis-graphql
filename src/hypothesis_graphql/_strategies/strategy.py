@@ -374,7 +374,7 @@ def queries(
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if parsed_schema.query_type is None:
-        raise ValueError("Query type is not defined in the schema")
+        raise InvalidArgument("Query type is not defined in the schema")
     return (
         _make_strategy(parsed_schema, type_=parsed_schema.query_type, fields=fields, custom_scalars=custom_scalars)
         .map(make_query)
@@ -401,7 +401,7 @@ def mutations(
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if parsed_schema.mutation_type is None:
-        raise ValueError("Mutation type is not defined in the schema")
+        raise InvalidArgument("Mutation type is not defined in the schema")
     return (
         _make_strategy(parsed_schema, type_=parsed_schema.mutation_type, fields=fields, custom_scalars=custom_scalars)
         .map(make_mutation)
@@ -454,5 +454,5 @@ def from_schema(
         if type_ is not None and (type_fields is None or len(type_fields) > 0)
     ]
     if not strategies:
-        raise ValueError("Query or Mutation type must be provided")
+        raise InvalidArgument("Query or Mutation type must be provided")
     return reduce(or_, strategies)
