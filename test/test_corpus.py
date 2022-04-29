@@ -7,8 +7,7 @@ import pytest
 from hypothesis import HealthCheck, Phase, Verbosity, given, settings
 from hypothesis import strategies as st
 
-from hypothesis_graphql import nodes
-from hypothesis_graphql import strategies as gql_st
+from hypothesis_graphql import from_schema, nodes
 from hypothesis_graphql._strategies.strategy import BUILT_IN_SCALAR_TYPE_NAMES
 from hypothesis_graphql.cache import cached_build_schema
 
@@ -71,17 +70,5 @@ CORPUS_SETTINGS = {
 @settings(**CORPUS_SETTINGS)
 @given(data=st.data())
 def test_corpus(data, schema: Schema, validate_operation):
-    query = data.draw(gql_st.queries(schema.raw, custom_scalars=schema.custom_scalars))
+    query = data.draw(from_schema(schema.raw, custom_scalars=schema.custom_scalars))
     validate_operation(schema.raw, query)
-
-
-@pytest.mark.parametrize(
-    "schema",
-    get_names(schemas, lambda name: "type Mutation {" in schemas[name] and name != "HIVDB"),
-    indirect=["schema"],
-)
-@settings(**CORPUS_SETTINGS)
-@given(data=st.data())
-def test_corpus_mutations(data, schema: Schema, validate_operation):
-    mutation = data.draw(gql_st.mutations(schema.raw, custom_scalars=schema.custom_scalars))
-    validate_operation(schema.raw, mutation)

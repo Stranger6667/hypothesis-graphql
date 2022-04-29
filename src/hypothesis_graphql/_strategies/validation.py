@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, Union
+from typing import List, Tuple, Union
 
 import graphql
 from hypothesis import strategies as st
@@ -14,7 +14,7 @@ def maybe_parse_schema(schema: Union[str, graphql.GraphQLSchema]) -> graphql.Gra
     return schema
 
 
-def validate_fields(fields_: Tuple[str, ...], available_fields: Dict[str, graphql.GraphQLField]) -> None:
+def validate_fields(fields_: Tuple[str, ...], available_fields: List[str]) -> None:
     if not fields_:
         raise ValueError("If you pass `fields`, it should not be empty")
     invalid_fields = tuple(field for field in fields_ if field not in available_fields)

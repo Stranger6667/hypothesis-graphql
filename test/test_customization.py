@@ -5,8 +5,7 @@ from hypothesis import find, given
 from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
 
-from hypothesis_graphql import nodes
-from hypothesis_graphql import strategies as gql_st
+from hypothesis_graphql import nodes, queries
 
 CUSTOM_SCALAR_TEMPLATE = """
 scalar Date
@@ -36,7 +35,7 @@ def test_custom_scalar_non_argument(data, validate_operation):
     # And is used in a non-argument position
 
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getObjects: [Object]")
-    query = data.draw(gql_st.queries(schema))
+    query = data.draw(queries(schema))
     validate_operation(schema, query)
     # Then queries should be generated
     assert "created" in query
@@ -52,7 +51,7 @@ def test_custom_scalar_argument_nullable(validate_operation):
 
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date): Object")
 
-    @given(query=gql_st.queries(schema))
+    @given(query=queries(schema))
     def test(query):
         nonlocal num_of_queries
 
@@ -75,7 +74,7 @@ def test_custom_scalar_argument(data, input_type):
     schema = CUSTOM_SCALAR_TEMPLATE.format(query=f"getByDate(created: {input_type}!): Object")
 
     with pytest.raises(TypeError, match="Scalar 'Date' is not supported"):
-        data.draw(gql_st.queries(schema))
+        data.draw(queries(schema))
 
 
 @pytest.mark.parametrize("other_type", ("String!", "String"))
@@ -96,7 +95,7 @@ type Query {{
 }}"""
 
     # Then it could be skipped
-    strategy = gql_st.queries(schema)
+    strategy = queries(schema)
 
     @given(strategy)
     def test(query):
@@ -123,7 +122,7 @@ def test_custom_scalar_field(data, validate_operation):
     }
     """
     # Then query should be generated without errors
-    query = data.draw(gql_st.queries(schema))
+    query = data.draw(queries(schema))
     validate_operation(schema, query)
     assert (
         query.strip()
@@ -142,7 +141,7 @@ def test_custom_scalar_registered(data, validate_operation):
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Int")
     expected = "EXAMPLE"
 
-    query = data.draw(gql_st.queries(schema, custom_scalars={"Date": st.just(expected).map(nodes.String)}))
+    query = data.draw(queries(schema, custom_scalars={"Date": st.just(expected).map(nodes.String)}))
     validate_operation(schema, query)
     assert f'getByDate(created: "{expected}")' in query
 
@@ -165,4 +164,4 @@ def test_invalid_custom_scalar_strategy(custom_scalars, expected):
     # Then there should be an error
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Int")
     with pytest.raises(InvalidArgument, match=expected):
-        gql_st.queries(schema, custom_scalars=custom_scalars)
+        queries(schema, custom_scalars=custom_scalars)
