@@ -1,6 +1,7 @@
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
+from hypothesis.errors import InvalidArgument
 
 from hypothesis_graphql import from_schema
 
@@ -41,5 +42,5 @@ def test_from_schema(data, schema, validate_operation, types, available_fields):
 
 
 def test_no_query_no_mutation(schema, validate_operation):
-    with pytest.raises(ValueError, match="Query or Mutation type must be provided"):
+    with pytest.raises(InvalidArgument, match="Query or Mutation type must be provided"):
         from_schema(schema)

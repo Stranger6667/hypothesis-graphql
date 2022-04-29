@@ -6,6 +6,10 @@
 
 - The `from_schema` function which takes a GraphQL schema and returns a Hypothesis strategy for defined queries and mutations.
 
+### Changed
+
+- Use Hypothesis' `InvalidArgument` exception when an invalid input is passed to the generator functions.
+
 ### Removed
 
 - `hypothesis_graphql.schemas` as it is not complete and not tested well.

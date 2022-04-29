@@ -1,6 +1,7 @@
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
+from hypothesis.errors import InvalidArgument
 
 from hypothesis_graphql import mutations
 
@@ -33,5 +34,5 @@ def test_mutation(data, mutation, validate_operation, fields):
 
 
 def test_no_mutation(schema):
-    with pytest.raises(ValueError, match="Mutation type is not defined in the schema"):
+    with pytest.raises(InvalidArgument, match="Mutation type is not defined in the schema"):
         mutations(schema)

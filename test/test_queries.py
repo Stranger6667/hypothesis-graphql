@@ -3,6 +3,7 @@ import pytest
 from graphql import GraphQLNamedType
 from hypothesis import assume, find, given, settings
 from hypothesis import strategies as st
+from hypothesis.errors import InvalidArgument
 
 from hypothesis_graphql import nodes, queries
 from hypothesis_graphql._strategies.strategy import GraphQLStrategy
@@ -172,7 +173,7 @@ def test_missing_query():
     schema = """type Author {
       name: String
     }"""
-    with pytest.raises(ValueError, match="Query type is not defined in the schema"):
+    with pytest.raises(InvalidArgument, match="Query type is not defined in the schema"):
         queries(schema)
 
 
