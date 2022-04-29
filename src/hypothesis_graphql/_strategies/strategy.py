@@ -1,6 +1,7 @@
 # pylint: disable=unused-import
 import operator
-from functools import wraps
+from functools import reduce, wraps
+from operator import or_
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import attr
@@ -348,7 +349,7 @@ def _make_strategy(
 ) -> st.SearchStrategy[List[graphql.FieldNode]]:
     if fields is not None:
         fields = tuple(fields)
-        validation.validate_fields(fields, type_.fields)
+        validation.validate_fields(fields, list(type_.fields))
     if custom_scalars:
         validation.validate_custom_scalars(custom_scalars)
     return GraphQLStrategy(schema, custom_scalars or {}).selections(type_, fields=fields)
@@ -406,3 +407,52 @@ def mutations(
         .map(make_mutation)
         .map(print_ast)
     )
+
+
+@cacheable  # type: ignore
+def from_schema(
+    schema: Union[str, graphql.GraphQLSchema],
+    *,
+    fields: Optional[Iterable[str]] = None,
+    custom_scalars: Optional[CustomScalarStrategies] = None,
+    print_ast: AstPrinter = graphql.print_ast,
+) -> st.SearchStrategy[str]:
+    """A strategy for generating valid queries and mutations for the given GraphQL schema.
+
+    :param schema: GraphQL schema as a string or `graphql.GraphQLSchema`.
+    :param fields: Restrict generated fields to ones in this list.
+    :param custom_scalars: Strategies for generating custom scalars.
+    :param print_ast: A function to convert the generated AST to a string.
+    """
+    parsed_schema = validation.maybe_parse_schema(schema)
+    if custom_scalars:
+        validation.validate_custom_scalars(custom_scalars)
+    query = parsed_schema.query_type
+    mutation = parsed_schema.mutation_type
+    query_fields = None
+    mutation_fields = None
+    if fields is not None:
+        # Split fields based on the type they are defined on & validate them
+        fields = tuple(fields)
+        available_fields = []
+        if query is not None:
+            query_fields = tuple(field for field in fields if field in query.fields)
+            available_fields.extend(query.fields)
+        if mutation is not None:
+            mutation_fields = tuple(field for field in fields if field in mutation.fields)
+            available_fields.extend(mutation.fields)
+        validation.validate_fields(fields, available_fields)
+
+    strategy = GraphQLStrategy(parsed_schema, custom_scalars or {})
+    strategies = [
+        strategy.selections(type_, fields=type_fields).map(node_factory).map(print_ast)
+        for (type_, type_fields, node_factory) in (
+            (query, query_fields, make_query),
+            (mutation, mutation_fields, make_mutation),
+        )
+        # If a type is defined in the schema and don't have restrictions on fields or has at least one selected field
+        if type_ is not None and (type_fields is None or len(type_fields) > 0)
+    ]
+    if not strategies:
+        raise ValueError("Query or Mutation type must be provided")
+    return reduce(or_, strategies)

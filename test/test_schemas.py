@@ -2,14 +2,14 @@ import graphql
 import pytest
 from hypothesis import given, settings
 
-from hypothesis_graphql._strategies import schema as gql_st
+from hypothesis_graphql._strategies import schema as gst
 
 
 @pytest.mark.parametrize(
     "strategy, node_type",
     (
-        (gql_st.scalar_typedef(), graphql.ScalarTypeDefinitionNode),
-        (gql_st.object_typedef(), graphql.ObjectTypeDefinitionNode),
+        (gst.scalar_typedef(), graphql.ScalarTypeDefinitionNode),
+        (gst.object_typedef(), graphql.ObjectTypeDefinitionNode),
     ),
 )
 def test_generation(strategy, node_type):
