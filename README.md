@@ -15,12 +15,14 @@ detect internal server errors.
 
 ## Usage
 
-``hypothesis_graphql`` exposes the ``from_schema`` function, which takes a GraphQL schema and returns a Hypothesis strategy for
-defined queries and mutations.
+`hypothesis_graphql` exposes the `from_schema` function, which takes a GraphQL schema and returns a Hypothesis strategy for
+defined queries and mutations:
 
-Lets take this schema as an example:
+```python
+from hypothesis import given
+from hypothesis_graphql import from_schema
 
-```graphql
+SCHEMA = """
 type Book {
   title: String
   author: Author
@@ -40,15 +42,7 @@ type Mutation {
   addBook(title: String!, author: String!): Book!
   addAuthor(name: String!): Author!
 }
-```
-
-Then you can generate queries or mutations like this:
-
-```python
-from hypothesis import given
-from hypothesis_graphql import from_schema
-
-SCHEMA = "..."  # the one above
+"""
 
 
 @given(from_schema(SCHEMA))
