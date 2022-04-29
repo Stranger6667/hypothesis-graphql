@@ -317,6 +317,10 @@ def subset_of_fields(
     fields: Dict[str, graphql.GraphQLInputField], *, force_required: bool = False
 ) -> st.SearchStrategy[List[Tuple[str, graphql.GraphQLInputField]]]:
     """A helper to select a subset of fields."""
+    if not fields:
+        # The schema is invalid as there should be at least one field
+        # But there should not be an internal error because of it
+        return EMPTY_LISTS_STRATEGY
     field_pairs = sorted(fields.items())
     # if we need to always generate required fields, then return them and extend with a subset of optional fields
     if force_required:

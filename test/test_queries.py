@@ -129,9 +129,8 @@ def test_arguments(data, schema, arguments, node_names, notnull, validate_operat
 @given(data=st.data())
 def test_interface(data, schema, query_type, validate_operation):
     schema = schema + query_type
-    parsed_schema = cached_build_schema(schema)
     query = data.draw(gql_st.queries(schema))
-    validate_operation(parsed_schema, query)
+    validate_operation(schema, query)
 
 
 @pytest.mark.parametrize(
@@ -453,3 +452,26 @@ type Query {{
 
     find(strategy, validate_and_find)
     assert all_valid
+
+
+@given(data=st.data())
+def test_empty_interface(data, validate_operation):
+    # When the schema contains an empty interface (which is invalid)
+    schema = """
+interface Empty
+
+type First implements Empty {
+  int: Int!
+}
+type Second implements Empty {
+  float: Float!
+}
+
+type Query {
+  getByEmpty: Empty
+}"""
+    # Then query generation should not fail
+    query = data.draw(gql_st.queries(schema))
+    # And then schema validation should fail instead
+    with pytest.raises(TypeError, match="Type Empty must define one or more fields"):
+        validate_operation(schema, query)
