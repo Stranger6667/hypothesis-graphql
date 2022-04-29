@@ -6,6 +6,10 @@
 
 - The `from_schema` function which takes a GraphQL schema and returns a Hypothesis strategy for defined queries and mutations.
 
+### Removed
+
+- `hypothesis_graphql.schemas` as it is not complete and not tested well.
+
 ## [0.8.2] - 2022-04-29
 
 ### Fixed
