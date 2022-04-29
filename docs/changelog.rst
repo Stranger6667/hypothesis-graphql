@@ -4,6 +4,9 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+`0.8.2`_ - 2022-04-29
+---------------------
+
 **Fixed**
 
 - Internal error on some invalid schemas.
@@ -169,7 +172,8 @@ Invalid queries:
 
 - Initial public release
 
-.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.1...HEAD
+.. _Unreleased: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.2...HEAD
+.. _0.8.2: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.1...v0.8.2
 .. _0.8.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.0...v0.8.1
 .. _0.8.0: https://github.com/stranger6667/hypothesis-graphql/compare/v0.7.1...v0.8.0
 .. _0.7.1: https://github.com/stranger6667/hypothesis-graphql/compare/v0.7.0...v0.7.1
