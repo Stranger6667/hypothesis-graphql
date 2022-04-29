@@ -27,12 +27,12 @@ include = ["src/hypothesis_graphql/py.typed"]
 
 [tool.poetry.dependencies]
 python = "^3.6"
-hypothesis = ">5.8.0"
-graphql-core = "^3.1.0"
-attrs = ">20.3.0"
+hypothesis = ">=5.8.0,<7.0"
+graphql-core = ">=3.1.0,<3.3.0"
+attrs = ">20.3.0,<=21.4.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.4.1"
+pytest = "^6.2.0"
 
 [tool.black]
 line-length = 120
