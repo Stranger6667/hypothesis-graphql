@@ -4,6 +4,10 @@ Changelog
 `Unreleased`_ - TBD
 -------------------
 
+**Fixed**
+
+- Internal error on some invalid schemas.
+
 `0.8.1`_ - 2022-04-27
 ---------------------
 
