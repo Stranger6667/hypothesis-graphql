@@ -7,21 +7,27 @@
 [![Chat](https://img.shields.io/discord/938139740912369755)](https://discord.gg/VnxfdFmBUp)
 [![License](https://img.shields.io/pypi/l/hypothesis-graphql.svg)](https://opensource.org/licenses/MIT)
 
-Hypothesis strategies for GraphQL operations. Allows you to generate arbitrary GraphQL queries for the given schema.
-It starts with simple examples and iteratively goes to more complex ones.
+<h4 align="center">
+Generate queries matching your GraphQL schema, and use them to verify your backend implementation
+</h4>
 
-For web API testing, [Schemathesis](https://github.com/schemathesis/schemathesis) provides a higher-level wrapper and can
-detect internal server errors.
+It is a Python library that provides a set of [Hypothesis](https://github.com/HypothesisWorks/hypothesis/tree/master/hypothesis-python) strategies that
+let you write tests parametrized by a source of examples.
+Generated queries have arbitrary depth and may contain any subset of GraphQL types defined in the input schema.
+They expose edge cases in your code that are unlikely to be found otherwise.
+
+For web API testing, [Schemathesis](https://github.com/schemathesis/schemathesis) provides a higher-level wrapper around this library.
 
 ## Usage
 
-`hypothesis_graphql` exposes the `from_schema` function, which takes a GraphQL schema and returns a Hypothesis strategy for
-defined queries and mutations:
+`hypothesis_graphql` provides the `from_schema` function, which takes a GraphQL schema and returns a Hypothesis strategy for
+GraphQL queries matching the schema:
 
 ```python
 from hypothesis import given
 from hypothesis_graphql import from_schema
 
+# Strings and `graphql.GraphQLSchema` are supported
 SCHEMA = """
 type Book {
   title: String
