@@ -16,11 +16,11 @@ let you write tests parametrized by a source of examples.
 Generated queries have arbitrary depth and may contain any subset of GraphQL types defined in the input schema.
 They expose edge cases in your code that are unlikely to be found otherwise.
 
-For web API testing, [Schemathesis](https://github.com/schemathesis/schemathesis) provides a higher-level wrapper around this library.
+[Schemathesis](https://github.com/schemathesis/schemathesis) provides a higher-level interface around this library and finds server crashes automatically.
 
 ## Usage
 
-`hypothesis_graphql` provides the `from_schema` function, which takes a GraphQL schema and returns a Hypothesis strategy for
+`hypothesis-graphql` provides the `from_schema` function, which takes a GraphQL schema and returns a Hypothesis strategy for
 GraphQL queries matching the schema:
 
 ```python
@@ -127,3 +127,8 @@ The `hypothesis_graphql.nodes` module includes a few helpers to generate various
 - `Null` -> `graphql.NullValueNode` (a constant, not a function)
 
 They exist because classes like `graphql.StringValueNode` can't be directly used in `map` calls due to kwarg-only arguments.
+
+## License
+
+The code in this project is licensed under [MIT license](https://opensource.org/licenses/MIT).
+By contributing to `hypothesis-graphql`, you agree that your contributions will be licensed under its MIT license.
