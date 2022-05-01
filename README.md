@@ -26,6 +26,7 @@ GraphQL queries matching the schema:
 ```python
 from hypothesis import given
 from hypothesis_graphql import from_schema
+import requests
 
 # Strings and `graphql.GraphQLSchema` are supported
 SCHEMA = """
@@ -66,7 +67,9 @@ def test_graphql(query):
     #     title
     #   }
     # }
-    ...
+    response = requests.post("http://127.0.0.1/graphql", json={"query": query})
+    assert response.status_code == 200
+    assert response.json().get("errors") is None
 ```
 
 It is also possible to generate queries or mutations separately with `hypothesis_graphql.queries` and `hypothesis_graphql.mutations`.
