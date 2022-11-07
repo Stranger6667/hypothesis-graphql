@@ -16,6 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Software Development :: Testing",
 ]
@@ -29,7 +30,7 @@ include = ["src/hypothesis_graphql/py.typed"]
 python = "^3.6"
 hypothesis = ">=5.8.0,<7.0"
 graphql-core = ">=3.1.0,<3.3.0"
-attrs = ">20.3.0,<=21.4.0"
+attrs = ">20.3.0,<=22.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.0"

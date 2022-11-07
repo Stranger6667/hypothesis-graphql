@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- Support for Python 3.11.
+
 ## [0.9.1] - 2022-09-02
 
 - Use `poetry-core` for building the package.
