@@ -1,5 +1,4 @@
-# pylint: disable=unused-import
-from ._strategies.strategy import from_schema, mutations, queries
+from ._strategies.strategy import from_schema, mutations, queries  # noqa: F401
 
 # Backward compatibility
 query = queries
