@@ -1,7 +1,8 @@
 import json
 import pathlib
+from dataclasses import dataclass
+from typing import Optional
 
-import attr
 import graphql
 import pytest
 from hypothesis import HealthCheck, Phase, Verbosity, given, settings
@@ -22,10 +23,10 @@ INVALID_SCHEMAS = {
 }
 
 
-@attr.s(slots=True)
+@dataclass
 class Schema:
-    raw = attr.ib()
-    custom_scalars = attr.ib()
+    raw: dict
+    custom_scalars: Optional[dict]
 
 
 PLACEHOLDER_STRATEGY = st.just("placeholder").map(nodes.String)

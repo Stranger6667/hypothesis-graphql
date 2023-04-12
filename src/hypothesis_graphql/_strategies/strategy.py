@@ -1,10 +1,10 @@
 # pylint: disable=unused-import
+import dataclasses
 import operator
 from functools import reduce, wraps
 from operator import or_
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
-import attr
 import graphql
 from graphql import is_equal_type
 from hypothesis import strategies as st
@@ -40,15 +40,15 @@ def instance_cache(key_func: Callable) -> Callable:
     return decorator
 
 
-@attr.s(slots=True)
+@dataclasses.dataclass
 class GraphQLStrategy:
     """Strategy for generating various GraphQL nodes."""
 
-    schema: graphql.GraphQLSchema = attr.ib()
-    custom_scalars: CustomScalarStrategies = attr.ib(factory=dict)
+    schema: graphql.GraphQLSchema
+    custom_scalars: CustomScalarStrategies = dataclasses.field(default_factory=dict)
     # As the schema is assumed to be immutable, there are a few strategy caches possible for internal components
     # This is a per-method cache without limits as they are proportionate to the schema size
-    _cache: Dict[str, Dict] = attr.ib(factory=dict)
+    _cache: Dict[str, Dict] = dataclasses.field(default_factory=dict)
 
     def values(
         self, type_: graphql.GraphQLInputType, default: Optional[graphql.ValueNode] = None

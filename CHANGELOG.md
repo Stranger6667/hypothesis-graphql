@@ -5,6 +5,7 @@
 ### Removed
 
 - Python 3.6 support.
+- Dependency on `attrs`.
 
 ## [0.9.2] - 2022-11-07
 
