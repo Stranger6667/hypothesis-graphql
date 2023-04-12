@@ -89,7 +89,6 @@ def update_corpus(futures: List[Future], corpus_path: str = CORPUS_PATH) -> Dict
 
 
 def main(directory_url: str = API_DIRECTORY_URL, corpus_path: str = CORPUS_PATH):
-
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
 
