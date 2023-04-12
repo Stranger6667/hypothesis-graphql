@@ -2,6 +2,8 @@
 
 ## [Unreleased] - TBD
 
+## [0.10.0] - 2023-04-12
+
 ### Changed
 
 - **Build**: Switch the build backend to [Hatch](https://hatch.pypa.io/>).
@@ -185,7 +187,8 @@ Invalid queries:
 
 - Initial public release
 
-[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.8.2...v0.9.0
