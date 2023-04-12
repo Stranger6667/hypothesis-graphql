@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Changed
+
+- **Build**: Switch the build backend to [Hatch](https://hatch.pypa.io/>).
+
 ### Removed
 
 - Python 3.6 support.
