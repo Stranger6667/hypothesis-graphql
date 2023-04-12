@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Removed
+
+- Python 3.6 support.
+
 ## [0.9.2] - 2022-11-07
 
 ### Added
