@@ -30,7 +30,7 @@ license = "MIT"
 include = ["src/hypothesis_graphql/py.typed"]
 requires-python = ">=3.8"
 dependencies = [
-    "hypothesis>=5.8.0,<7.0",
+    "hypothesis>=6.84.3,<7.0",
     "graphql-core>=3.1.0,<3.3.0",
 ]
 
