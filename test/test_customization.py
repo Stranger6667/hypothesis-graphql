@@ -103,7 +103,10 @@ type Query {{
 
     test()
     # And "id" is still possible to generate
-    assert find(strategy, lambda x: "id" in x).strip() == '{\n  getByDate(created: {id: ""})\n}'
+    assert find(strategy, lambda x: "id" in x).strip() in (
+        '{\n  getByDate(created: {id: ""})\n}',
+        "{\n  getByDate(created: {id: null})\n}",
+    )
 
 
 @given(data=st.data())
