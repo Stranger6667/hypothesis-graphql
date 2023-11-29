@@ -85,6 +85,18 @@ def test_graphql(query):
     ...
 ```
 
+You can customize the string generation with these arguments to `from_schema`:
+
+- `allow_x00` (default `True`): Determines whether to allow the generation of `\x00` bytes within strings. It is useful to avoid rejecting tests as invalid by some web servers.
+- `codec` (default `utf-8`): Specifies the codec used for generating strings. It helps if you need to restrict the inputs to, for example, the ASCII range.
+
+```python
+@given(from_schema(SCHEMA, allow_x00=False, codec="ascii"))
+def test_graphql(query):
+    assert "\0" not in query
+    query.encode("ascii")
+```
+
 It is also possible to generate custom scalars. For example, `Date`:
 
 ```python
