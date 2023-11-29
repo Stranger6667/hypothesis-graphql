@@ -42,12 +42,12 @@ def List(
 # Boolean & Enum nodes have a limited set of variants, therefore caching is effective in this case
 
 
-@lru_cache()
+@lru_cache
 def Boolean(value: bool) -> graphql.BooleanValueNode:
     return graphql.BooleanValueNode(value=value)
 
 
-@lru_cache()
+@lru_cache
 def Enum(value: str) -> graphql.EnumValueNode:
     return graphql.EnumValueNode(value=value)
 

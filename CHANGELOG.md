@@ -7,6 +7,10 @@
 - Support for Python 3.12.
 - Include tests in the source tarball. #82
 
+### Removed
+
+- Python 3.7 support.
+
 ## [0.10.0] - 2023-04-12
 
 ### Changed

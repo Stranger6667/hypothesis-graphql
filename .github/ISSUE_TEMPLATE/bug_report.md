@@ -23,9 +23,9 @@ A clear and concise description of what you expected to happen.
 **Environment (please complete the following information):**
 
 - OS: [e.g. Linux or Windows]
-- Python version: [e.g. 3.7.2]
-- hypothesis-graphql version: [e.g. 0.3.0]
-- hypothesis version: [e.g. 5.30.1]
+- Python version: [e.g. 3.10.8]
+- hypothesis-graphql version: [e.g. 0.11.0]
+- hypothesis version: [e.g. 6.91.1]
 
 **Additional context**
 Add any other context about the problem here.
