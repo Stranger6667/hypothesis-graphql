@@ -21,7 +21,6 @@ def _string(
     return StringValueNode(value=value)
 
 
-STRING_STRATEGY = st.text(alphabet=st.characters(blacklist_categories=("Cs",), max_codepoint=0xFFFF)).map(_string)
 INTEGER_STRATEGY = st.integers(min_value=MIN_INT, max_value=MAX_INT).map(nodes.Int)
 FLOAT_STRATEGY = st.floats(allow_infinity=False, allow_nan=False).map(nodes.Float)
 BOOLEAN_STRATEGY = st.booleans().map(nodes.Boolean)
@@ -30,51 +29,56 @@ NULL_STRATEGY = st.just(nodes.Null)
 
 @lru_cache(maxsize=16)
 def scalar(
-    type_name: str, nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    alphabet: st.SearchStrategy[str],
+    type_name: str,
+    nullable: bool = True,
+    default: Optional[graphql.ValueNode] = None,
 ) -> st.SearchStrategy[ScalarValueNode]:
     if type_name == "Int":
-        return int_(nullable, default)
+        return int_(nullable=nullable, default=default)
     if type_name == "Float":
-        return float_(nullable, default)
+        return float_(nullable=nullable, default=default)
     if type_name == "String":
-        return string(nullable, default)
+        return string(nullable=nullable, default=default, alphabet=alphabet)
     if type_name == "ID":
-        return id_(nullable, default)
+        return id_(nullable=nullable, default=default, alphabet=alphabet)
     if type_name == "Boolean":
-        return boolean(nullable, default)
+        return boolean(nullable=nullable, default=default)
     raise InvalidArgument(
         f"Scalar {type_name!r} is not supported. "
         "Provide a Hypothesis strategy via the `custom_scalars` argument to generate it."
     )
 
 
-def int_(nullable: bool = True, default: Optional[graphql.ValueNode] = None) -> st.SearchStrategy[graphql.IntValueNode]:
+def int_(
+    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None
+) -> st.SearchStrategy[graphql.IntValueNode]:
     return maybe_default(maybe_null(INTEGER_STRATEGY, nullable), default=default)
 
 
 def float_(
-    nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None
 ) -> st.SearchStrategy[graphql.FloatValueNode]:
     return maybe_default(maybe_null(FLOAT_STRATEGY, nullable), default=default)
 
 
 def string(
-    nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None, alphabet: st.SearchStrategy[str]
 ) -> st.SearchStrategy[graphql.StringValueNode]:
     return maybe_default(
-        maybe_null(STRING_STRATEGY, nullable),
+        maybe_null(st.text(alphabet=alphabet).map(_string), nullable),
         default=default,
     )
 
 
 def id_(
-    nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None, alphabet: st.SearchStrategy[str]
 ) -> st.SearchStrategy[Union[graphql.StringValueNode, graphql.IntValueNode]]:
-    return maybe_default(string(nullable) | int_(nullable), default=default)
+    return maybe_default(string(nullable=nullable, alphabet=alphabet) | int_(nullable=nullable), default=default)
 
 
 def boolean(
-    nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None
 ) -> st.SearchStrategy[graphql.BooleanValueNode]:
     return maybe_default(maybe_null(BOOLEAN_STRATEGY, nullable), default=default)
 
