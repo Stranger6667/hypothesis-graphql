@@ -17,7 +17,7 @@ on:
 jobs:
   pre-commit:
     name: Generic pre-commit checks
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4.1.1
         with:
@@ -32,7 +32,7 @@ jobs:
 
   mypy:
     name: Mypy
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4.1.1
         with:
@@ -48,7 +48,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         python: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
 
     name: ${{ matrix.os }}/tests_${{ matrix.python }}
