@@ -5,6 +5,7 @@
 ### Added
 
 - Support for Python 3.12.
+- Include tests in the source tarball. #82
 
 ## [0.10.0] - 2023-04-12
 
@@ -213,6 +214,7 @@ Invalid queries:
 [0.3.1]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.2.0...v0.3.0
 
+[#82]: https://github.com/Stranger6667/hypothesis-graphql/82
 [#71]: https://github.com/Stranger6667/hypothesis-graphql/71
 [#69]: https://github.com/Stranger6667/hypothesis-graphql/69
 [#57]: https://github.com/Stranger6667/hypothesis-graphql/57

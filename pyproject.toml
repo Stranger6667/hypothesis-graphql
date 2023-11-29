@@ -53,6 +53,12 @@ Changelog = "https://github.com/Stranger6667/hypothesis-graphql/blob/master/CHAN
 Funding = "https://github.com/sponsors/Stranger6667"
 "Source Code" = "https://github.com/Stranger6667/hypothesis-graphql"
 
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/test",
+]
+
 [tool.coverage.run]
 parallel = true
 branch = true
