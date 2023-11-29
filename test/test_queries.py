@@ -186,7 +186,7 @@ def test_unknown_type(simple_schema):
         pass
 
     with pytest.raises(TypeError, match="Type NewType is not supported."):
-        GraphQLStrategy(schema).values(NewType("Test"))
+        GraphQLStrategy(schema, alphabet=st.characters()).values(NewType("Test"))
 
 
 @given(data=st.data())
@@ -473,3 +473,15 @@ type Query {
     # And then schema validation should fail instead
     with pytest.raises(TypeError, match="Type Empty must define one or more fields"):
         validate_operation(schema, query)
+
+
+@given(data=st.data())
+def test_custom_strings(data, validate_operation):
+    schema = """
+type Query {
+  getExample(name: String): String
+}"""
+    query = data.draw(queries(schema, allow_x00=False, codec="ascii"))
+    validate_operation(schema, query)
+    assert "\0" not in query
+    query.encode("ascii")

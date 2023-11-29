@@ -6,14 +6,15 @@
 
 - Support for Python 3.12.
 - Include tests in the source tarball. #82
-
-### Removed
-
-- Python 3.7 support.
+- A way to control what characters are used for string generation via the `allow_x00` and `codec` arguments to `queries`, `mutations` and `from_schema`.
 
 ### Changed
 
 - Bump the minimum supported Hypothesis version to `6.84.3`.
+
+### Removed
+
+- Python 3.7 support.
 
 ## [0.10.0] - 2023-04-12
 

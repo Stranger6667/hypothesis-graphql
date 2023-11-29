@@ -52,6 +52,7 @@ class GraphQLStrategy:
     """Strategy for generating various GraphQL nodes."""
 
     schema: graphql.GraphQLSchema
+    alphabet: st.SearchStrategy[str]
     custom_scalars: CustomScalarStrategies = dataclasses.field(default_factory=dict)
     # As the schema is assumed to be immutable, there are a few strategy caches possible for internal components
     # This is a per-method cache without limits as they are proportionate to the schema size
@@ -79,7 +80,7 @@ class GraphQLStrategy:
             type_name = type_.name
             if type_name in self.custom_scalars:
                 return primitives.custom(self.custom_scalars[type_name], nullable, default=default)
-            return primitives.scalar(type_name, nullable, default=default)
+            return primitives.scalar(alphabet=self.alphabet, type_name=type_name, nullable=nullable, default=default)
         if isinstance(type_, graphql.GraphQLEnumType):
             values = tuple(type_.values)
             return primitives.enum(values, nullable, default=default)
@@ -372,13 +373,22 @@ def _make_strategy(
     type_: graphql.GraphQLObjectType,
     fields: Optional[Iterable[str]] = None,
     custom_scalars: Optional[CustomScalarStrategies] = None,
+    alphabet: st.SearchStrategy[str],
 ) -> st.SearchStrategy[List[graphql.FieldNode]]:
     if fields is not None:
         fields = tuple(fields)
         validation.validate_fields(fields, list(type_.fields))
     if custom_scalars:
         validation.validate_custom_scalars(custom_scalars)
-    return GraphQLStrategy(schema, custom_scalars or {}).selections(type_, fields=fields)
+    return GraphQLStrategy(schema=schema, alphabet=alphabet, custom_scalars=custom_scalars or {}).selections(
+        type_, fields=fields
+    )
+
+
+def _build_alphabet(allow_x00: bool = True, codec: Optional[str] = "utf-8") -> st.SearchStrategy[str]:
+    return st.characters(
+        codec=codec, min_codepoint=0 if allow_x00 else 1, max_codepoint=0xFFFF, blacklist_categories=["Cs"]
+    )
 
 
 @cacheable  # type: ignore
@@ -388,8 +398,10 @@ def queries(
     fields: Optional[Iterable[str]] = None,
     custom_scalars: Optional[CustomScalarStrategies] = None,
     print_ast: AstPrinter = graphql.print_ast,
+    allow_x00: bool = True,
+    codec: Optional[str] = "utf-8",
 ) -> st.SearchStrategy[str]:
-    """A strategy for generating valid queries for the given GraphQL schema.
+    r"""A strategy for generating valid queries for the given GraphQL schema.
 
     The output query will contain a subset of fields defined in the `Query` type.
 
@@ -397,16 +409,20 @@ def queries(
     :param fields: Restrict generated fields to ones in this list.
     :param custom_scalars: Strategies for generating custom scalars.
     :param print_ast: A function to convert the generated AST to a string.
+    :param allow_x00: Determines whether to allow the generation of `\x00` bytes within strings.
+    :param codec: Specifies the codec used for generating strings.
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if parsed_schema.query_type is None:
         raise InvalidArgument("Query type is not defined in the schema")
+    alphabet = _build_alphabet(allow_x00=allow_x00, codec=codec)
     return (
         _make_strategy(
             parsed_schema,
             type_=parsed_schema.query_type,
             fields=fields,
             custom_scalars=custom_scalars,
+            alphabet=alphabet,
         )
         .map(make_query)
         .map(print_ast)
@@ -420,8 +436,10 @@ def mutations(
     fields: Optional[Iterable[str]] = None,
     custom_scalars: Optional[CustomScalarStrategies] = None,
     print_ast: AstPrinter = graphql.print_ast,
+    allow_x00: bool = True,
+    codec: Optional[str] = "utf-8",
 ) -> st.SearchStrategy[str]:
-    """A strategy for generating valid mutations for the given GraphQL schema.
+    r"""A strategy for generating valid mutations for the given GraphQL schema.
 
     The output mutation will contain a subset of fields defined in the `Mutation` type.
 
@@ -429,16 +447,20 @@ def mutations(
     :param fields: Restrict generated fields to ones in this list.
     :param custom_scalars: Strategies for generating custom scalars.
     :param print_ast: A function to convert the generated AST to a string.
+    :param allow_x00: Determines whether to allow the generation of `\x00` bytes within strings.
+    :param codec: Specifies the codec used for generating strings.
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if parsed_schema.mutation_type is None:
         raise InvalidArgument("Mutation type is not defined in the schema")
+    alphabet = _build_alphabet(allow_x00=allow_x00, codec=codec)
     return (
         _make_strategy(
             parsed_schema,
             type_=parsed_schema.mutation_type,
             fields=fields,
             custom_scalars=custom_scalars,
+            alphabet=alphabet,
         )
         .map(make_mutation)
         .map(print_ast)
@@ -452,13 +474,17 @@ def from_schema(
     fields: Optional[Iterable[str]] = None,
     custom_scalars: Optional[CustomScalarStrategies] = None,
     print_ast: AstPrinter = graphql.print_ast,
+    allow_x00: bool = True,
+    codec: Optional[str] = "utf-8",
 ) -> st.SearchStrategy[str]:
-    """A strategy for generating valid queries and mutations for the given GraphQL schema.
+    r"""A strategy for generating valid queries and mutations for the given GraphQL schema.
 
     :param schema: GraphQL schema as a string or `graphql.GraphQLSchema`.
     :param fields: Restrict generated fields to ones in this list.
     :param custom_scalars: Strategies for generating custom scalars.
     :param print_ast: A function to convert the generated AST to a string.
+    :param allow_x00: Determines whether to allow the generation of `\x00` bytes within strings.
+    :param codec: Specifies the codec used for generating strings.
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if custom_scalars:
@@ -479,7 +505,8 @@ def from_schema(
             available_fields.extend(mutation.fields)
         validation.validate_fields(fields, available_fields)
 
-    strategy = GraphQLStrategy(parsed_schema, custom_scalars or {})
+    alphabet = _build_alphabet(allow_x00=allow_x00, codec=codec)
+    strategy = GraphQLStrategy(parsed_schema, alphabet=alphabet, custom_scalars=custom_scalars or {})
     strategies = [
         strategy.selections(type_, fields=type_fields).map(node_factory).map(print_ast)
         for (type_, type_fields, node_factory) in (
