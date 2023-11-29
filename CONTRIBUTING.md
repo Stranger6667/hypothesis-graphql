@@ -27,7 +27,7 @@ the problem.
 
 3.  Target the `master` branch.
 
-4.  Follow **PEP-8** for naming and [black](https://github.com/psf/black) for formatting.
+4.  Follow [PEP-8](https://pep8.org) for naming and [ruff](https://github.com/astral-sh/ruff) for code formatting.
 
 5.  Tests are run using `tox`:
 

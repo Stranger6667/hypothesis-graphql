@@ -12,7 +12,14 @@ from hypothesis.errors import InvalidArgument
 from hypothesis.strategies._internal.utils import cacheable
 
 from .. import nodes
-from ..types import AstPrinter, CustomScalarStrategies, Field, InputTypeNode, InterfaceOrObject, SelectionNodes
+from ..types import (
+    AstPrinter,
+    CustomScalarStrategies,
+    Field,
+    InputTypeNode,
+    InterfaceOrObject,
+    SelectionNodes,
+)
 from . import factories, primitives, validation
 from .ast import make_mutation, make_query
 from .containers import flatten
@@ -51,7 +58,9 @@ class GraphQLStrategy:
     _cache: Dict[str, Dict] = dataclasses.field(default_factory=dict)
 
     def values(
-        self, type_: graphql.GraphQLInputType, default: Optional[graphql.ValueNode] = None
+        self,
+        type_: graphql.GraphQLInputType,
+        default: Optional[graphql.ValueNode] = None,
     ) -> st.SearchStrategy[InputTypeNode]:
         """Generate value nodes of a type, that corresponds to the input type.
 
@@ -81,9 +90,18 @@ class GraphQLStrategy:
             return self.objects(type_, nullable)
         raise TypeError(f"Type {type_.__class__.__name__} is not supported.")
 
-    @instance_cache(lambda type_, nullable=True, default=None: (make_type_name(type_), nullable, default))
+    @instance_cache(
+        lambda type_, nullable=True, default=None: (
+            make_type_name(type_),
+            nullable,
+            default,
+        )
+    )
     def lists(
-        self, type_: graphql.GraphQLList, nullable: bool = True, default: Optional[graphql.ValueNode] = None
+        self,
+        type_: graphql.GraphQLList,
+        nullable: bool = True,
+        default: Optional[graphql.ValueNode] = None,
     ) -> st.SearchStrategy[graphql.ListValueNode]:
         """Generate a `graphql.ListValueNode`."""
         strategy = st.lists(self.values(type_.of_type))
@@ -121,16 +139,24 @@ class GraphQLStrategy:
     ) -> st.SearchStrategy[List[graphql.ObjectFieldNode]]:
         return st.tuples(
             *(
-                self.values(field.type, field.ast_node.default_value if field.ast_node is not None else None).map(
-                    factories.object_field(name)
-                )
+                self.values(
+                    field.type,
+                    field.ast_node.default_value if field.ast_node is not None else None,
+                ).map(factories.object_field(name))
                 for name, field in items
             )
         ).map(list)
 
-    @instance_cache(lambda interface, implementations: (interface.name, tuple(impl.name for impl in implementations)))
+    @instance_cache(
+        lambda interface, implementations: (
+            interface.name,
+            tuple(impl.name for impl in implementations),
+        )
+    )
     def interfaces(
-        self, interface: graphql.GraphQLInterfaceType, implementations: List[InterfaceOrObject]
+        self,
+        interface: graphql.GraphQLInterfaceType,
+        implementations: List[InterfaceOrObject],
     ) -> st.SearchStrategy[SelectionNodes]:
         """Build query for GraphQL interface type."""
         # If there are implementations that have fields with the same name but different types
@@ -376,7 +402,12 @@ def queries(
     if parsed_schema.query_type is None:
         raise InvalidArgument("Query type is not defined in the schema")
     return (
-        _make_strategy(parsed_schema, type_=parsed_schema.query_type, fields=fields, custom_scalars=custom_scalars)
+        _make_strategy(
+            parsed_schema,
+            type_=parsed_schema.query_type,
+            fields=fields,
+            custom_scalars=custom_scalars,
+        )
         .map(make_query)
         .map(print_ast)
     )
@@ -403,7 +434,12 @@ def mutations(
     if parsed_schema.mutation_type is None:
         raise InvalidArgument("Mutation type is not defined in the schema")
     return (
-        _make_strategy(parsed_schema, type_=parsed_schema.mutation_type, fields=fields, custom_scalars=custom_scalars)
+        _make_strategy(
+            parsed_schema,
+            type_=parsed_schema.mutation_type,
+            fields=fields,
+            custom_scalars=custom_scalars,
+        )
         .map(make_mutation)
         .map(print_ast)
     )

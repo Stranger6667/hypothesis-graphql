@@ -434,9 +434,7 @@ input InputData {{
 type Query {{
   getValue(arg: {outer_type_name} = {outer_default}): Int!
 }}
-    """.format(
-        **format_kwargs({"type_name": type_name, "default": default})
-    )
+    """.format(**format_kwargs({"type_name": type_name, "default": default}))
     strategy = queries(schema, custom_scalars={"Date": st.just("2022-04-26").map(nodes.String)})
     # Then these default values should be used in generated queries
 

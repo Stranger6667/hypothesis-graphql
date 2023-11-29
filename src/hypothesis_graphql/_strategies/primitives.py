@@ -86,7 +86,9 @@ def maybe_null(strategy: st.SearchStrategy[T], nullable: bool) -> st.SearchStrat
 
 
 def custom(
-    strategy: st.SearchStrategy, nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    strategy: st.SearchStrategy,
+    nullable: bool = True,
+    default: Optional[graphql.ValueNode] = None,
 ) -> st.SearchStrategy:
     return maybe_default(maybe_null(strategy, nullable), default=default)
 
@@ -101,7 +103,9 @@ def maybe_default(
 
 @lru_cache(maxsize=64)
 def enum(
-    values: Tuple[str], nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    values: Tuple[str],
+    nullable: bool = True,
+    default: Optional[graphql.ValueNode] = None,
 ) -> st.SearchStrategy[graphql.EnumValueNode]:
     return maybe_default(maybe_null(st.sampled_from(values).map(nodes.Enum), nullable), default=default)
 
