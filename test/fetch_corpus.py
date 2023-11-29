@@ -51,7 +51,9 @@ def load_json(url: str) -> Any:
 
 def load_schema(url: str) -> str:
     request = urllib.request.Request(
-        url, data=INTROSPECTION_QUERY_PAYLOAD, headers={"Content-Type": "application/json"}
+        url,
+        data=INTROSPECTION_QUERY_PAYLOAD,
+        headers={"Content-Type": "application/json"},
     )
     with urllib.request.urlopen(request) as response:
         data = json.load(response)

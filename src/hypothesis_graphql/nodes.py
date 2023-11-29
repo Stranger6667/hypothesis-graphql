@@ -8,13 +8,15 @@ import graphql
 
 
 def String(
-    value: typing.Any, StringValueNode: typing.Type[graphql.StringValueNode] = graphql.StringValueNode
+    value: typing.Any,
+    StringValueNode: typing.Type[graphql.StringValueNode] = graphql.StringValueNode,
 ) -> graphql.StringValueNode:
     return StringValueNode(value=str(value))
 
 
 def Float(
-    value: float, FloatValueNode: typing.Type[graphql.FloatValueNode] = graphql.FloatValueNode
+    value: float,
+    FloatValueNode: typing.Type[graphql.FloatValueNode] = graphql.FloatValueNode,
 ) -> graphql.FloatValueNode:
     return FloatValueNode(value=str(value))
 
@@ -31,7 +33,8 @@ def Object(
 
 
 def List(
-    values: typing.List[graphql.ValueNode], ListValueNode: typing.Type[graphql.ListValueNode] = graphql.ListValueNode
+    values: typing.List[graphql.ValueNode],
+    ListValueNode: typing.Type[graphql.ListValueNode] = graphql.ListValueNode,
 ) -> graphql.ListValueNode:
     return ListValueNode(values=values)
 

@@ -20,7 +20,9 @@ def maybe_add_alias_to_node(node: graphql.SelectionNode, seen: Dict[Tuple[str, s
 
 
 def maybe_add_alias(
-    field_node: graphql.FieldNode, arguments: List[graphql.ArgumentNode], seen: Dict[Tuple[str, str], List]
+    field_node: graphql.FieldNode,
+    arguments: List[graphql.ArgumentNode],
+    seen: Dict[Tuple[str, str], List],
 ) -> None:
     for argument in arguments:
         key = (field_node.name.value, argument.name.value)
