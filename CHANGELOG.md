@@ -11,6 +11,10 @@
 
 - Python 3.7 support.
 
+### Changed
+
+- Bump the minimum supported Hypothesis version to `6.84.3`.
+
 ## [0.10.0] - 2023-04-12
 
 ### Changed
