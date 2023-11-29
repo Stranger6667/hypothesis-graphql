@@ -58,10 +58,3 @@ repos:
       - id: mypy
         exclude: ^(docs/|test/).*$
         args: ["--ignore-missing-imports"]
-
-  - repo: https://github.com/myint/rstcheck
-    rev: v6.1.2
-    hooks:
-      - id: rstcheck
-        additional_dependencies:
-          - sphinx==4.5.0
