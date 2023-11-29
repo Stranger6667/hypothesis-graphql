@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hypothesis-graphql"
-version = "0.10.0"
+version = "0.11.0"
 description = "Hypothesis strategies for GraphQL queries"
 keywords = ["hypothesis", "graphql", "testing"]
 classifiers = [
