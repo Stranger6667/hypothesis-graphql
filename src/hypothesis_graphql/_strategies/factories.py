@@ -13,7 +13,7 @@ from .aliases import add_selection_aliases
 FieldNodeInput = Tuple[List[graphql.ArgumentNode], Optional[SelectionNodes]]
 
 
-@lru_cache()
+@lru_cache
 def inline_fragment(type_name: str) -> Callable[[SelectionNodes], graphql.InlineFragmentNode]:
     def factory(nodes: SelectionNodes) -> graphql.InlineFragmentNode:
         return graphql.InlineFragmentNode(
@@ -26,7 +26,7 @@ def inline_fragment(type_name: str) -> Callable[[SelectionNodes], graphql.Inline
     return factory
 
 
-@lru_cache()
+@lru_cache
 def argument(name: str) -> Callable[[graphql.ValueNode], graphql.ArgumentNode]:
     def factory(value: graphql.ValueNode) -> graphql.ArgumentNode:
         return graphql.ArgumentNode(name=graphql.NameNode(value=name), value=value)
@@ -34,7 +34,7 @@ def argument(name: str) -> Callable[[graphql.ValueNode], graphql.ArgumentNode]:
     return factory
 
 
-@lru_cache()
+@lru_cache
 def field(name: str) -> Callable[[FieldNodeInput], graphql.FieldNode]:
     def factory(tup: FieldNodeInput) -> graphql.FieldNode:
         return graphql.FieldNode(
@@ -46,7 +46,7 @@ def field(name: str) -> Callable[[FieldNodeInput], graphql.FieldNode]:
     return factory
 
 
-@lru_cache()
+@lru_cache
 def object_field(name: str) -> Callable[[graphql.ValueNode], graphql.ObjectFieldNode]:
     def factory(value: graphql.ValueNode) -> graphql.ObjectFieldNode:
         return graphql.ObjectFieldNode(name=graphql.NameNode(value=name), value=value)

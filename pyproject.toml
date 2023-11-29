@@ -15,7 +15,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -29,7 +28,7 @@ maintainers = [{ name = "Dmitry Dygalo", email = "dmitry@dygalo.dev" }]
 readme = "README.md"
 license = "MIT"
 include = ["src/hypothesis_graphql/py.typed"]
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 dependencies = [
     "hypothesis>=5.8.0,<7.0",
     "graphql-core>=3.1.0,<3.3.0",
@@ -102,7 +101,7 @@ ignore = [
     "D213",  # Multiline summary second line
     "D401",  # Imperative mood
 ]
-target-version = "py37"
+target-version = "py38"
 
 # Ignore `F401` (unused import) in all `__init__.py` files.
 [tool.ruff.per-file-ignores]

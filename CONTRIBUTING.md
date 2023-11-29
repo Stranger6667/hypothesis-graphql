@@ -31,7 +31,7 @@ the problem.
 
 5.  Tests are run using `tox`:
 
-        tox -e py37
+        tox -e py39
 
     The test environment above is usually enough to cover most cases
     locally.
