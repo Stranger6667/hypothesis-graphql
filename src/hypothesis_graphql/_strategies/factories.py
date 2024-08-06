@@ -2,6 +2,7 @@
 
 Most of them exist to avoid using lambdas, which might become expensive in Hypothesis in some cases.
 """
+
 from functools import lru_cache
 from typing import Callable, List, Optional, Tuple
 
