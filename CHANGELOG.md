@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- The `allow_null` option that controls if optional arguments may be `null`. `True` by default. 
+
 ## [0.11.0] - 2023-11-29
 
 ### Added
