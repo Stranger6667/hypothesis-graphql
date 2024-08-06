@@ -67,6 +67,7 @@ def test_query_from_graphql_schema(data, schema, validate_operation):
     validate_operation(schema, query)
 
 
+@pytest.mark.parametrize("allow_null", (True, False))
 @pytest.mark.parametrize("notnull", (True, False))
 @pytest.mark.parametrize(
     "arguments, node_names",
@@ -96,7 +97,7 @@ def test_query_from_graphql_schema(data, schema, validate_operation):
     ),
 )
 @given(data=st.data())
-def test_arguments(data, schema, arguments, node_names, notnull, validate_operation):
+def test_arguments(data, schema, arguments, node_names, allow_null, notnull, validate_operation):
     if notnull:
         arguments += "!"
     query_type = f"""type Query {{
@@ -104,12 +105,14 @@ def test_arguments(data, schema, arguments, node_names, notnull, validate_operat
     }}"""
 
     schema = schema + query_type
-    query = data.draw(queries(schema))
+    query = data.draw(queries(schema, allow_null=allow_null))
     validate_operation(schema, query)
     for node_name in node_names:
         assert node_name not in query
     if notnull:
         assert "getModel(" in query
+    if not allow_null:
+        assert "null)" not in query
     parsed = graphql.parse(query)
     selection = parsed.definitions[0].selection_set.selections[0]
     if notnull:
