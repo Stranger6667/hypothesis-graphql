@@ -1,4 +1,5 @@
 """Strategies for simple types like scalars or enums."""
+
 from functools import lru_cache
 from typing import Optional, Tuple, Type, TypeVar, Union
 

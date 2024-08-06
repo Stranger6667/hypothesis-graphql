@@ -8,20 +8,20 @@ version = "0.11.0"
 description = "Hypothesis strategies for GraphQL queries"
 keywords = ["hypothesis", "graphql", "testing"]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Environment :: Console",
-    "Framework :: Hypothesis",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Topic :: Software Development :: Testing",
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Framework :: Hypothesis",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Topic :: Software Development :: Testing",
 ]
 authors = [{ name = "Dmitry Dygalo", email = "dmitry@dygalo.dev" }]
 maintainers = [{ name = "Dmitry Dygalo", email = "dmitry@dygalo.dev" }]
@@ -29,21 +29,11 @@ readme = "README.md"
 license = "MIT"
 include = ["src/hypothesis_graphql/py.typed"]
 requires-python = ">=3.8"
-dependencies = [
-    "hypothesis>=6.84.3,<7.0",
-    "graphql-core>=3.1.0,<3.3.0",
-]
+dependencies = ["hypothesis>=6.84.3,<7.0", "graphql-core>=3.1.0,<3.3.0"]
 
 [project.optional-dependencies]
-tests = [
-    "coverage>=7",
-    "pytest>=6.2.0,<8",
-    "pytest-xdist>=2.5,<3.0",
-]
-cov = [
-    "coverage-enable-subprocess",
-    "coverage[toml]>=7",
-]
+tests = ["coverage>=7", "pytest>=6.2.0,<8", "pytest-xdist>=2.5,<3.0"]
+cov = ["coverage-enable-subprocess", "coverage[toml]>=7"]
 dev = ["hypothesis_graphql[tests,cov]"]
 
 [project.urls]
@@ -53,10 +43,7 @@ Funding = "https://github.com/sponsors/Stranger6667"
 "Source Code" = "https://github.com/Stranger6667/hypothesis-graphql"
 
 [tool.hatch.build.targets.sdist]
-include = [
-  "/src",
-  "/test",
-]
+include = ["/src", "/test"]
 
 [tool.coverage.run]
 parallel = true
@@ -70,47 +57,45 @@ source = ["src", ".tox/*/site-packages"]
 show_missing = true
 skip_covered = true
 precision = 2
-exclude_lines = [
-    "raise NotImplementedError",
-    "if TYPE_CHECKING:",
-    "pass"
-]
+exclude_lines = ["raise NotImplementedError", "if TYPE_CHECKING:", "pass"]
 
 [tool.ruff]
 line-length = 120
-select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "C",  # flake8-comprehensions
-    "B",  # flake8-bugbear
-    "D",  # pydocstyle
-]
-ignore = [
-    "E501",  # Line too long
-    "B008",  # Do not perform function calls in argument defaults
-    "C901",  # Too complex
-    "D100",  # Missing docstring in public module
-    "D101",  # Missing docstring in public class
-    "D102",  # Missing docstring in public method
-    "D103",  # Missing docstring in public function
-    "D104",  # Missing docstring in public package
-    "D105",  # Missing docstring in magic method
-    "D107",  # Missing docstring in `__init__`
-    "D203",  # One blank line before class
-    "D213",  # Multiline summary second line
-    "D401",  # Imperative mood
-]
 target-version = "py38"
 
+[tool.ruff.lint]
+select = [
+  "E", # pycodestyle errors
+  "W", # pycodestyle warnings
+  "F", # pyflakes
+  "C", # flake8-comprehensions
+  "B", # flake8-bugbear
+  "D", # pydocstyle
+]
+ignore = [
+  "E501", # Line too long
+  "B008", # Do not perform function calls in argument defaults
+  "C901", # Too complex
+  "D100", # Missing docstring in public module
+  "D101", # Missing docstring in public class
+  "D102", # Missing docstring in public method
+  "D103", # Missing docstring in public function
+  "D104", # Missing docstring in public package
+  "D105", # Missing docstring in magic method
+  "D107", # Missing docstring in `__init__`
+  "D203", # One blank line before class
+  "D213", # Multiline summary second line
+  "D401", # Imperative mood
+]
+
 # Ignore `F401` (unused import) in all `__init__.py` files.
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "strategies.py" = ["F401"]
 
 [tool.ruff.format]
 skip-magic-trailing-comma = false
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["hypothesis_graphql"]
 known-third-party = ["graphql", "hypothesis", "pytest"]
