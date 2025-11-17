@@ -19,7 +19,7 @@ jobs:
     name: Generic pre-commit checks
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.1
         with:
           fetch-depth: 1
 
@@ -34,7 +34,7 @@ jobs:
     name: Mypy
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.1
         with:
           fetch-depth: 1
 
@@ -54,7 +54,7 @@ jobs:
     name: ${{ matrix.os }}/tests_${{ matrix.python }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.1
         with:
           fetch-depth: 1
 
