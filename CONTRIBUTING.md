@@ -23,7 +23,7 @@ the problem.
 
 1.  Fork the repository.
 
-2.  Enable and install [pre-commit](https://pre-commit.com) to ensure style-guides and code checks are followed.
+2.  Enable and install [prek](https://prek.j178.dev) to ensure style-guides and code checks are followed.
 
 3.  Target the `master` branch.
 
