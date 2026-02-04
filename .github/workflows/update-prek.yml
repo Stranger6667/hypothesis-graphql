@@ -12,20 +12,20 @@ permissions:
 jobs:
   release:
     name: Update prek
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 1
           submodules: true
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v7.2.1
 
       - run: uv tool install prek
       - run: prek autoupdate
 
       - name: Open pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           delete-branch: true

@@ -10,11 +10,11 @@ on:
 jobs:
   commitsar:
     name: Verify commit messages
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out code
         uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
       - name: Run commitsar
-        uses: docker://commitsar/commitsar
+        uses: docker://commitsar/commitsar:0.16.0
