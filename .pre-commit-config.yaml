@@ -1,5 +1,5 @@
 default_language_version:
-  python: python3.9
+  python: python3.10
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -32,11 +32,11 @@ repos:
         args: ["--ignore-missing-imports"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.13
+    rev: v0.15.0
     hooks:
       - id: ruff-format
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.13
+    rev: v0.15.0
     hooks:
       - id: ruff

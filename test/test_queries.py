@@ -415,7 +415,7 @@ def test_custom_printer(simple_schema):
             "inner_type_name": x["type_name"],
             "inner_default": x["default"],
             "outer_type_name": "InputData!",
-            "outer_default": f'{{ inner: {x["default"]} }}',
+            "outer_default": f"{{ inner: {x['default']} }}",
         },
     ),
 )
