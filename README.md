@@ -181,7 +181,7 @@ def test_server_rejects_invalid_queries(query):
         assert "errors" in response.json()
 ```
 
-The `negative` parameter works with `queries()`, `mutations()`, and `from_schema()`.
+The `mode` parameter works with `queries()`, `mutations()`, and `from_schema()`.
 
 ## License
 
