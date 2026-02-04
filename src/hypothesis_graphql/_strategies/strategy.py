@@ -23,6 +23,8 @@ from ..types import (
 from . import factories, primitives, validation
 from .ast import make_mutation, make_query
 from .containers import flatten
+from .mode import Mode
+from .negative import ViolationTracker
 
 BY_NAME = operator.attrgetter("name")
 EMPTY_LISTS_STRATEGY = st.builds(list)
@@ -55,9 +57,23 @@ class GraphQLStrategy:
     alphabet: st.SearchStrategy[str]
     custom_scalars: CustomScalarStrategies = dataclasses.field(default_factory=dict)
     allow_null: bool = True
+    violation_tracker: Optional[ViolationTracker] = None
     # As the schema is assumed to be immutable, there are a few strategy caches possible for internal components
     # This is a per-method cache without limits as they are proportionate to the schema size
     _cache: Dict[str, Dict] = dataclasses.field(default_factory=dict)
+
+    def _inject_or_generate(
+        self, draw: st.DrawFn, violation_strategies: List[st.SearchStrategy], valid_strategy: st.SearchStrategy
+    ) -> Any:
+        """Choose between injecting a violation or generating a valid value."""
+        if self.violation_tracker is not None and violation_strategies:
+            should_inject = self.violation_tracker.should_inject(draw)
+            if should_inject:
+                # Draw a strategy from the list, then draw from that strategy
+                chosen_strategy = draw(st.sampled_from(violation_strategies))
+                self.violation_tracker.mark_injected()
+                return draw(chosen_strategy)
+        return draw(valid_strategy)
 
     def values(
         self,
@@ -75,9 +91,21 @@ class GraphQLStrategy:
             - GraphQLList -> ListValueNode[T]
             - GraphQLNonNull -> T (processed with nullable=False)
         """
+        if self.violation_tracker is not None:
+            # Negative mode - use composite strategy to inject violations
+            return self._values_with_violations(type_, default)
+        return self._values_valid(type_, default)
+
+    def _values_valid(
+        self,
+        type_: graphql.GraphQLInputType,
+        default: Optional[graphql.ValueNode] = None,
+    ) -> st.SearchStrategy[InputTypeNode]:
+        """Generate valid value nodes (original behavior)."""
         type_, nullable = check_nullable(type_)
         if not self.allow_null:
             nullable = False
+
         # Types without children
         if isinstance(type_, graphql.GraphQLScalarType):
             type_name = type_.name
@@ -93,6 +121,70 @@ class GraphQLStrategy:
         if isinstance(type_, graphql.GraphQLInputObjectType):
             return self.objects(type_, nullable)
         raise TypeError(f"Type {type_.__class__.__name__} is not supported.")
+
+    def _values_with_violations(
+        self,
+        type_: graphql.GraphQLInputType,
+        default: Optional[graphql.ValueNode] = None,
+    ) -> st.SearchStrategy[InputTypeNode]:
+        """Generate value nodes with possible violations for negative testing."""
+
+        @st.composite  # type: ignore
+        def _generate(draw: st.DrawFn) -> InputTypeNode:
+            unwrapped_type, schema_nullable = check_nullable(type_)
+            # For valid values, respect allow_null setting
+            nullable = schema_nullable and self.allow_null
+
+            if isinstance(unwrapped_type, graphql.GraphQLScalarType):
+                type_name = unwrapped_type.name
+                violations = []
+                if type_name in BUILT_IN_SCALAR_TYPE_NAMES:
+                    violations.append(primitives.wrong_type_for(type_name))
+                if type_name == "Int":
+                    violations.append(primitives.out_of_range_int())
+                # Null is only a violation if schema says field is NOT nullable
+                if not schema_nullable:
+                    violations.append(st.just(nodes.Null))
+
+                if type_name in self.custom_scalars:
+                    valid_strategy = primitives.custom(self.custom_scalars[type_name], nullable, default=default)
+                else:
+                    valid_strategy = primitives.scalar(
+                        alphabet=self.alphabet, type_name=type_name, nullable=nullable, default=default
+                    )
+
+                return self._inject_or_generate(draw, violations, valid_strategy)
+
+            if isinstance(unwrapped_type, graphql.GraphQLEnumType):
+                valid_values = tuple(unwrapped_type.values.keys())
+                violations = [primitives.invalid_enum(valid_values)]
+                valid_strategy = primitives.enum(tuple(unwrapped_type.values), nullable, default=default)
+                return self._inject_or_generate(draw, violations, valid_strategy)
+
+            if isinstance(unwrapped_type, graphql.GraphQLList):
+                violations = []
+                element_type = unwrapped_type.of_type
+                while isinstance(element_type, graphql.GraphQLWrappingType):
+                    element_type = element_type.of_type
+                if (
+                    isinstance(element_type, graphql.GraphQLScalarType)
+                    and element_type.name in BUILT_IN_SCALAR_TYPE_NAMES
+                ):
+                    violations.append(primitives.wrong_type_for(element_type.name))
+                elif isinstance(element_type, graphql.GraphQLEnumType):
+                    violations.append(primitives.INTEGER_STRATEGY)
+                if not schema_nullable:
+                    violations.append(st.just(nodes.Null))
+
+                valid_strategy = st.lists(self.values(unwrapped_type.of_type), min_size=1).map(nodes.List)
+                valid_strategy = primitives.maybe_null(valid_strategy, nullable)
+                valid_strategy = primitives.maybe_default(valid_strategy, default=default)
+
+                return self._inject_or_generate(draw, violations, valid_strategy)
+            # InputObject is the only remaining input type
+            return draw(self.objects(unwrapped_type, nullable))
+
+        return _generate()
 
     @instance_cache(
         lambda type_, nullable=True, default=None: (
@@ -116,14 +208,31 @@ class GraphQLStrategy:
         self, type_: graphql.GraphQLInputObjectType, nullable: bool = True
     ) -> st.SearchStrategy[graphql.ObjectValueNode]:
         """Generate a `graphql.ObjectValueNode`."""
+        # Generate optional fields that are possible to generate and all required fields.
+        # If a required field is not possible to generate, then it will fail deeper anyway
         fields = {
             name: field
             for name, field in type_.fields.items()
-            # Generate optional fields that are possible to generate and all required fields.
-            # If a required field is not possible to generate, then it will fail deeper anyway
             if self.can_generate_field(field) or graphql.is_required_input_field(field)
         }
-        strategy = subset_of_fields(fields, force_required=True).flatmap(self.lists_of_object_fields)
+
+        if self.violation_tracker is not None:
+            required_field_names = {name for name, field in fields.items() if graphql.is_required_input_field(field)}
+            tracker = self.violation_tracker
+
+            @st.composite  # type: ignore
+            def _object_with_violations(draw: st.DrawFn) -> List[graphql.ObjectFieldNode]:
+                should_violate = tracker.should_inject(draw)
+                selected = draw(subset_of_fields(fields, force_required=not should_violate))
+                selected_names = {name for name, _ in selected}
+                if should_violate and required_field_names and not required_field_names.issubset(selected_names):
+                    tracker.mark_injected()
+                return draw(self.lists_of_object_fields(selected))
+
+            strategy = _object_with_violations()
+        else:
+            strategy = subset_of_fields(fields, force_required=True).flatmap(self.lists_of_object_fields)
+
         return primitives.maybe_null(strategy.map(nodes.Object), nullable)
 
     def can_generate_field(self, field: graphql.GraphQLInputField) -> bool:
@@ -199,6 +308,8 @@ class GraphQLStrategy:
         else:
             subset = object_type.fields
         # minimum 1 field, an empty query is not valid
+        if self.violation_tracker is not None:
+            return subset_of_fields_negative(subset, self.custom_scalars).flatmap(self.lists_of_fields)
         return subset_of_fields(subset).flatmap(self.lists_of_fields)
 
     def lists_of_fields(self, items: List[Tuple[str, Field]]) -> st.SearchStrategy[List[graphql.FieldNode]]:
@@ -238,9 +349,16 @@ class GraphQLStrategy:
             return st.just([])
 
         @st.composite  # type: ignore
-        def inner(draw: Any) -> List[graphql.ArgumentNode]:
+        def inner(draw: st.DrawFn) -> List[graphql.ArgumentNode]:
             args = []
             for name, argument in arguments.items():
+                is_required = isinstance(argument.type, graphql.GraphQLNonNull)
+
+                # Negative mode: probabilistically skip required arguments (violation)
+                if is_required and self.violation_tracker is not None and self.violation_tracker.should_inject(draw):
+                    self.violation_tracker.mark_injected()
+                    continue
+
                 default = argument.ast_node.default_value if argument.ast_node is not None else None
                 try:
                     argument_strategy = self.values(argument.type, default=default)
@@ -311,7 +429,7 @@ def make_type_name(type_: graphql.GraphQLType) -> str:
 
 @st.composite  # type: ignore
 def compose_interfaces_with_filter(
-    draw: Any,
+    draw: st.DrawFn,
     already_selected: st.SearchStrategy[List],
     strategies: List[st.SearchStrategy[SelectionNodes]],
     type_map: Dict[str, graphql.GraphQLType],
@@ -370,6 +488,58 @@ def subset_of_fields(
     return st.lists(st.sampled_from(field_pairs), min_size=1, unique_by=lambda x: x[0])
 
 
+def _has_violation_opportunities(field: Field, custom_scalars: CustomScalarStrategies) -> bool:
+    """Check if a field has opportunities for violation injection."""
+    # Field has required arguments
+    for arg in field.args.values():
+        if isinstance(arg.type, graphql.GraphQLNonNull):
+            return True
+        # Field has built-in scalar arguments (can inject wrong type)
+        arg_type = arg.type
+        while isinstance(arg_type, graphql.GraphQLWrappingType):
+            arg_type = arg_type.of_type
+        if isinstance(arg_type, graphql.GraphQLScalarType) and arg_type.name in BUILT_IN_SCALAR_TYPE_NAMES:
+            return True
+        if isinstance(arg_type, graphql.GraphQLEnumType):
+            return True
+        if isinstance(arg_type, graphql.GraphQLInputObjectType):
+            # Check for required fields in input type
+            for input_field in arg_type.fields.values():
+                if graphql.is_required_input_field(input_field):
+                    return True
+    return False
+
+
+def subset_of_fields_negative(
+    fields: Dict[str, Field], custom_scalars: CustomScalarStrategies
+) -> st.SearchStrategy[List[Tuple[str, Field]]]:
+    """Select fields for negative mode, ensuring at least one field with violation opportunities."""
+    field_pairs = sorted(fields.items())
+    with_violations = [(n, f) for n, f in field_pairs if _has_violation_opportunities(f, custom_scalars)]
+
+    if not with_violations:
+        # No fields have violation opportunities - fall back to regular selection
+        return st.lists(st.sampled_from(field_pairs), min_size=1, unique_by=lambda x: x[0])
+
+    # Always include at least one field with violation opportunities
+    # Then optionally add more fields from either category
+    @st.composite  # type: ignore
+    def select_fields(draw: st.DrawFn) -> List[Tuple[str, Field]]:
+        # Pick at least one field with violations
+        required_field = draw(st.sampled_from(with_violations))
+        result = [required_field]
+
+        # Optionally add more fields
+        remaining = [f for f in field_pairs if f[0] != required_field[0]]
+        if remaining:
+            additional = draw(st.lists(st.sampled_from(remaining), unique_by=lambda x: x[0]))
+            result.extend(additional)
+
+        return result
+
+    return select_fields()
+
+
 def _make_strategy(
     schema: graphql.GraphQLSchema,
     *,
@@ -378,14 +548,52 @@ def _make_strategy(
     custom_scalars: Optional[CustomScalarStrategies] = None,
     alphabet: st.SearchStrategy[str],
     allow_null: bool = True,
+    mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[List[graphql.FieldNode]]:
+    """Create strategy for GraphQL selections (query/mutation fields).
+
+    Positive mode: Returns selections directly.
+    Negative mode: Wraps in composite with fresh ViolationTracker per query,
+                   validates at least one violation was injected.
+    """
     if fields is not None:
         fields = tuple(fields)
         validation.validate_fields(fields, list(type_.fields))
     if custom_scalars:
         validation.validate_custom_scalars(custom_scalars)
+
+    if mode == Mode.NEGATIVE:
+
+        @st.composite  # type: ignore
+        def _with_tracker(draw: st.DrawFn) -> List[graphql.FieldNode]:
+            tracker = ViolationTracker()
+
+            strategy_inst = GraphQLStrategy(
+                schema=schema,
+                alphabet=alphabet,
+                custom_scalars=custom_scalars or {},
+                allow_null=allow_null,
+                violation_tracker=tracker,
+            )
+
+            selections = draw(strategy_inst.selections(type_, fields=fields))
+
+            # Verify at least one violation was injected
+            if not tracker.has_injected:
+                raise InvalidArgument(
+                    "Cannot generate invalid queries in NEGATIVE mode: schema has no required "
+                    "arguments or built-in scalar types to violate. The schema needs at least "
+                    "one field with a required argument (e.g., `field(arg: Int!)`) or an enum type."
+                )
+
+            return selections
+
+        return _with_tracker()
     return GraphQLStrategy(
-        schema=schema, alphabet=alphabet, custom_scalars=custom_scalars or {}, allow_null=allow_null
+        schema=schema,
+        alphabet=alphabet,
+        custom_scalars=custom_scalars or {},
+        allow_null=allow_null,
     ).selections(type_, fields=fields)
 
 
@@ -405,8 +613,9 @@ def queries(
     allow_x00: bool = True,
     allow_null: bool = True,
     codec: Optional[str] = "utf-8",
+    mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[str]:
-    r"""A strategy for generating valid queries for the given GraphQL schema.
+    r"""A strategy for generating queries for the given GraphQL schema.
 
     The output query will contain a subset of fields defined in the `Query` type.
 
@@ -417,11 +626,13 @@ def queries(
     :param allow_x00: Determines whether to allow the generation of `\x00` bytes within strings.
     :param allow_null: Whether `null` values should be used for optional arguments.
     :param codec: Specifies the codec used for generating strings.
+    :param mode: Generation mode - POSITIVE for valid queries, NEGATIVE for invalid queries.
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if parsed_schema.query_type is None:
         raise InvalidArgument("Query type is not defined in the schema")
     alphabet = _build_alphabet(allow_x00=allow_x00, codec=codec)
+
     return (
         _make_strategy(
             parsed_schema,
@@ -430,6 +641,7 @@ def queries(
             custom_scalars=custom_scalars,
             alphabet=alphabet,
             allow_null=allow_null,
+            mode=mode,
         )
         .map(make_query)
         .map(print_ast)
@@ -446,8 +658,9 @@ def mutations(
     allow_x00: bool = True,
     allow_null: bool = True,
     codec: Optional[str] = "utf-8",
+    mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[str]:
-    r"""A strategy for generating valid mutations for the given GraphQL schema.
+    r"""A strategy for generating mutations for the given GraphQL schema.
 
     The output mutation will contain a subset of fields defined in the `Mutation` type.
 
@@ -458,11 +671,13 @@ def mutations(
     :param allow_x00: Determines whether to allow the generation of `\x00` bytes within strings.
     :param allow_null: Whether `null` values should be used for optional arguments.
     :param codec: Specifies the codec used for generating strings.
+    :param mode: Generation mode - POSITIVE for valid mutations, NEGATIVE for invalid mutations.
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if parsed_schema.mutation_type is None:
         raise InvalidArgument("Mutation type is not defined in the schema")
     alphabet = _build_alphabet(allow_x00=allow_x00, codec=codec)
+
     return (
         _make_strategy(
             parsed_schema,
@@ -471,6 +686,7 @@ def mutations(
             custom_scalars=custom_scalars,
             alphabet=alphabet,
             allow_null=allow_null,
+            mode=mode,
         )
         .map(make_mutation)
         .map(print_ast)
@@ -487,8 +703,9 @@ def from_schema(
     allow_x00: bool = True,
     allow_null: bool = True,
     codec: Optional[str] = "utf-8",
+    mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[str]:
-    r"""A strategy for generating valid queries and mutations for the given GraphQL schema.
+    r"""A strategy for generating queries and mutations for the given GraphQL schema.
 
     :param schema: GraphQL schema as a string or `graphql.GraphQLSchema`.
     :param fields: Restrict generated fields to ones in this list.
@@ -497,6 +714,7 @@ def from_schema(
     :param allow_x00: Determines whether to allow the generation of `\x00` bytes within strings.
     :param allow_null: Whether `null` values should be used for optional arguments.
     :param codec: Specifies the codec used for generating strings.
+    :param mode: Generation mode - POSITIVE for valid queries/mutations, NEGATIVE for invalid ones.
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if custom_scalars:
@@ -518,18 +736,35 @@ def from_schema(
         validation.validate_fields(fields, available_fields)
 
     alphabet = _build_alphabet(allow_x00=allow_x00, codec=codec)
-    strategy = GraphQLStrategy(
-        parsed_schema, alphabet=alphabet, custom_scalars=custom_scalars or {}, allow_null=allow_null
-    )
-    strategies = [
-        strategy.selections(type_, fields=type_fields).map(node_factory).map(print_ast)
-        for (type_, type_fields, node_factory) in (
-            (query, query_fields, make_query),
-            (mutation, mutation_fields, make_mutation),
+
+    # Build strategies for available types (works for both positive and negative mode)
+    strategies = []
+    for type_, type_fields, node_factory in (
+        (query, query_fields, make_query),
+        (mutation, mutation_fields, make_mutation),
+    ):
+        # If a type is defined in the schema and doesn't have restrictions on fields or has at least one selected field
+        if type_ is None or (type_fields is not None and len(type_fields) == 0):
+            continue
+
+        # Create strategy using unified _make_strategy (handles both modes)
+        strategy = (
+            _make_strategy(
+                parsed_schema,
+                type_=type_,
+                fields=type_fields,
+                custom_scalars=custom_scalars,
+                alphabet=alphabet,
+                allow_null=allow_null,
+                mode=mode,
+            )
+            .map(node_factory)
+            .map(print_ast)
         )
-        # If a type is defined in the schema and don't have restrictions on fields or has at least one selected field
-        if type_ is not None and (type_fields is None or len(type_fields) > 0)
-    ]
+
+        strategies.append(strategy)
+
     if not strategies:
         raise InvalidArgument("Query or Mutation type must be provided")
+
     return reduce(or_, strategies)

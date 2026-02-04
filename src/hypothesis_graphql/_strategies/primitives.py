@@ -24,8 +24,24 @@ def _string(
 
 INTEGER_STRATEGY = st.integers(min_value=MIN_INT, max_value=MAX_INT).map(nodes.Int)
 FLOAT_STRATEGY = st.floats(allow_infinity=False, allow_nan=False).map(nodes.Float)
+STRING_STRATEGY = st.text().map(_string)
 BOOLEAN_STRATEGY = st.booleans().map(nodes.Boolean)
 NULL_STRATEGY = st.just(nodes.Null)
+
+# Mapping of type names to their strategies for exclusion logic
+_PRIMITIVE_STRATEGIES = {
+    "Int": INTEGER_STRATEGY,
+    "Float": FLOAT_STRATEGY,
+    "String": STRING_STRATEGY,
+    "Boolean": BOOLEAN_STRATEGY,
+    "Null": NULL_STRATEGY,
+}
+
+
+def _except(*exclude: str) -> st.SearchStrategy[graphql.ValueNode]:
+    # Exclude Null from wrong type violations - null is valid for nullable fields
+    exclude_with_null = set(exclude) | {"Null"}
+    return st.one_of(*(strategy for name, strategy in _PRIMITIVE_STRATEGIES.items() if name not in exclude_with_null))
 
 
 @lru_cache(maxsize=16)
@@ -121,3 +137,60 @@ def list_(
     default: Optional[graphql.ValueNode] = None,
 ) -> st.SearchStrategy[graphql.ListValueNode]:
     return maybe_default(maybe_null(strategy.map(nodes.List), nullable), default=default)
+
+
+def invalid_int() -> st.SearchStrategy[graphql.ValueNode]:
+    return _except("Int")
+
+
+def invalid_string() -> st.SearchStrategy[graphql.ValueNode]:
+    return _except("String")
+
+
+def invalid_float() -> st.SearchStrategy[graphql.ValueNode]:
+    # Int coerces to Float in GraphQL, so exclude both
+    return _except("Float", "Int")
+
+
+def invalid_boolean() -> st.SearchStrategy[graphql.ValueNode]:
+    return _except("Boolean")
+
+
+def invalid_id() -> st.SearchStrategy[graphql.ValueNode]:
+    return st.one_of(FLOAT_STRATEGY, BOOLEAN_STRATEGY)
+
+
+def wrong_type_for(ty: str) -> st.SearchStrategy[graphql.ValueNode]:
+    if ty == "Int":
+        return invalid_int()
+    if ty == "String":
+        return invalid_string()
+    if ty == "Float":
+        return invalid_float()
+    if ty == "Boolean":
+        return invalid_boolean()
+    return invalid_id()
+
+
+def out_of_range_int() -> st.SearchStrategy[graphql.IntValueNode]:
+    return st.one_of(
+        st.integers(max_value=MIN_INT - 1),  # Too small
+        st.integers(min_value=MAX_INT + 1),  # Too large
+    ).map(nodes.Int)
+
+
+def invalid_enum(valid_values: Tuple[str, ...]) -> st.SearchStrategy[graphql.EnumValueNode]:
+    # Use only ASCII letters, digits, and underscore to match GraphQL enum syntax
+    # Enum values must match /[_A-Za-z][_0-9A-Za-z]*/ pattern
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_"
+    first_char_alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"
+
+    return (
+        st.builds(
+            lambda first, rest: first + rest,
+            st.sampled_from(first_char_alphabet),
+            st.text(alphabet=alphabet, max_size=10),
+        )
+        .filter(lambda x: x not in valid_values)
+        .map(nodes.Enum)
+    )

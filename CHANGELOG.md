@@ -5,12 +5,13 @@
 ### Added
 
 - Support for Python 3.13 and 3.14.
+- Negative testing mode for generating invalid queries.
 
 ## [0.11.1] - 2024-08-06
 
 ### Added
 
-- The `allow_null` option that controls if optional arguments may be `null`. `True` by default. 
+- The `allow_null` option that controls if optional arguments may be `null`. `True` by default.
 
 ## [0.11.0] - 2023-11-29
 
