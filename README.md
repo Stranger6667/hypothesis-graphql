@@ -143,6 +143,46 @@ The `hypothesis_graphql.nodes` module includes a few helpers to generate various
 
 They exist because classes like `graphql.StringValueNode` can't be directly used in `map` calls due to kwarg-only arguments.
 
+### Negative Testing
+
+`hypothesis-graphql` supports generating **invalid** GraphQL queries for negative testing. This is useful for testing error handling and validation logic in your GraphQL server.
+
+Use the `mode=Mode.NEGATIVE` parameter to generate queries that should be rejected:
+
+```python
+from hypothesis import given
+from hypothesis_graphql import queries, mode
+import requests
+
+SCHEMA = """
+type Query {
+    getUser(id: Int!, name: String!): User
+}
+
+type User {
+    id: Int!
+    name: String!
+}
+"""
+
+
+@given(queries(SCHEMA, mode=Mode.NEGATIVE))
+def test_server_rejects_invalid_queries(query):
+    # Generates queries with violations like:
+    # - Wrong types (String where Int expected)
+    # - Missing required arguments
+    # - Out-of-range integers
+    # - Null for non-null fields
+    # - Invalid enum values
+    response = requests.post("http://127.0.0.1/graphql", json={"query": query})
+
+    # Server should reject with 400 or return errors
+    if response.status_code == 200:
+        assert "errors" in response.json()
+```
+
+The `negative` parameter works with `queries()`, `mutations()`, and `from_schema()`.
+
 ## License
 
 The code in this project is licensed under [MIT license](https://opensource.org/licenses/MIT).
