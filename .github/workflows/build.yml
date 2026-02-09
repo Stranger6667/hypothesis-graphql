@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: 3.9
 
-      - uses: j178/prek-action@v1.1.0
+      - uses: j178/prek-action@v1.1.1
         with:
           extra-args: --all-files --skip mypy
 
@@ -43,7 +43,7 @@ jobs:
         with:
           python-version: 3.9
 
-      - uses: j178/prek-action@v1.1.0
+      - uses: j178/prek-action@v1.1.1
         with:
           extra-args: --all-files mypy
 
