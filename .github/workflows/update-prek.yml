@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 1
           submodules: true
 
-      - uses: astral-sh/setup-uv@v7.3.0
+      - uses: astral-sh/setup-uv@v7.3.1
 
       - run: uv tool install prek
       - run: prek autoupdate
