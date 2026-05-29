@@ -2,6 +2,8 @@
 
 ## [Unreleased] - TBD
 
+## [0.13.0] - 2026-05-29
+
 ### Changed
 
 - More even field and violation distribution across schema depth.
@@ -228,7 +230,8 @@ Invalid queries:
 
 - Initial public release
 
-[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.10.0...v0.11.0
