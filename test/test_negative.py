@@ -1,10 +1,10 @@
 import graphql
 import pytest
-from hypothesis import given, settings, find, HealthCheck
+from hypothesis import HealthCheck, find, given, settings
 from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
 
-from hypothesis_graphql import queries, mutations, from_schema, Mode, nodes
+from hypothesis_graphql import Mode, from_schema, mutations, nodes, queries
 
 
 def assert_query_invalid(query: str, schema: str) -> None:

@@ -3,7 +3,7 @@ import json
 import urllib.request
 from concurrent.futures._base import Future
 from contextlib import suppress
-from typing import Any, Dict, List
+from typing import Any
 
 import graphql
 
@@ -60,12 +60,12 @@ def load_schema(url: str) -> str:
     return introspection_result_to_sdl(data["data"])
 
 
-def introspection_result_to_sdl(data: Dict[str, Any]) -> str:
+def introspection_result_to_sdl(data: dict[str, Any]) -> str:
     client_schema = graphql.build_client_schema(data)
     return graphql.print_schema(client_schema).strip()
 
 
-def load_corpus(path: str = CORPUS_PATH) -> Dict[str, Any]:
+def load_corpus(path: str = CORPUS_PATH) -> dict[str, Any]:
     try:
         with open(path) as fd:
             return json.load(fd)
@@ -73,12 +73,12 @@ def load_corpus(path: str = CORPUS_PATH) -> Dict[str, Any]:
         return {}
 
 
-def store_corpus(data: Dict[str, Any], path: str = CORPUS_PATH) -> None:
+def store_corpus(data: dict[str, Any], path: str = CORPUS_PATH) -> None:
     with open(path, mode="w") as fd:
         json.dump(data, fd, indent=4, sort_keys=True)
 
 
-def update_corpus(futures: List[Future], corpus_path: str = CORPUS_PATH) -> Dict[str, Any]:
+def update_corpus(futures: list[Future], corpus_path: str = CORPUS_PATH) -> dict[str, Any]:
     corpus = load_corpus(corpus_path)
     with suppress(concurrent.futures.TimeoutError):
         for future in concurrent.futures.as_completed(futures, timeout=FETCH_TIMEOUT):

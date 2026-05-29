@@ -1,6 +1,5 @@
 import json
 import pathlib
-from typing import Dict, Optional
 
 import graphql
 from hypothesis import strategies as st
@@ -38,12 +37,12 @@ _CORPUS_SELECTION = {
 PLACEHOLDER_STRATEGY = st.just("placeholder").map(nodes.String)
 
 
-def _load_corpus() -> Dict[str, str]:
+def _load_corpus() -> dict[str, str]:
     with open(_CORPUS_PATH) as fd:
         return json.load(fd)
 
 
-def custom_scalars_for(schema: str) -> Optional[Dict[str, st.SearchStrategy]]:
+def custom_scalars_for(schema: str) -> dict[str, st.SearchStrategy] | None:
     parsed = graphql.build_schema(schema)
     custom = {
         name: PLACEHOLDER_STRATEGY
@@ -53,7 +52,7 @@ def custom_scalars_for(schema: str) -> Optional[Dict[str, st.SearchStrategy]]:
     return custom or None
 
 
-def load_schemas() -> Dict[str, str]:
+def load_schemas() -> dict[str, str]:
     corpus = _load_corpus()
     schemas = {"recursive": RECURSIVE_SCHEMA}
     for label, name in _CORPUS_SELECTION.items():
