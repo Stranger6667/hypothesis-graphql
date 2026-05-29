@@ -1,14 +1,13 @@
 import json
 import pathlib
 from dataclasses import dataclass
-from typing import Optional
 
 import graphql
 import pytest
 from hypothesis import HealthCheck, Phase, Verbosity, given, settings
 from hypothesis import strategies as st
 
-from hypothesis_graphql import from_schema, nodes, Mode
+from hypothesis_graphql import Mode, from_schema, nodes
 from hypothesis_graphql._strategies.strategy import BUILT_IN_SCALAR_TYPE_NAMES
 from hypothesis_graphql.cache import cached_build_schema
 
@@ -26,7 +25,7 @@ INVALID_SCHEMAS = {
 @dataclass
 class Schema:
     raw: dict
-    custom_scalars: Optional[dict]
+    custom_scalars: dict | None
 
 
 PLACEHOLDER_STRATEGY = st.just("placeholder").map(nodes.String)

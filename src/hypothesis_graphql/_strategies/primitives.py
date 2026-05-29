@@ -1,7 +1,9 @@
 """Strategies for simple types like scalars or enums."""
 
+from __future__ import annotations
+
 from functools import lru_cache
-from typing import Optional, Tuple, Type, TypeVar, Union
+from typing import TypeVar
 
 import graphql
 from hypothesis import strategies as st
@@ -17,7 +19,7 @@ MAX_INT = 2**31 - 1
 
 # `String` version without extra `str` call
 def _string(
-    value: str, StringValueNode: Type[graphql.StringValueNode] = graphql.StringValueNode
+    value: str, StringValueNode: type[graphql.StringValueNode] = graphql.StringValueNode
 ) -> graphql.StringValueNode:
     return StringValueNode(value=value)
 
@@ -49,7 +51,7 @@ def scalar(
     alphabet: st.SearchStrategy[str],
     type_name: str,
     nullable: bool = True,
-    default: Optional[graphql.ValueNode] = None,
+    default: graphql.ValueNode | None = None,
 ) -> st.SearchStrategy[ScalarValueNode]:
     if type_name == "Int":
         return int_(nullable=nullable, default=default)
@@ -67,20 +69,18 @@ def scalar(
     )
 
 
-def int_(
-    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None
-) -> st.SearchStrategy[graphql.IntValueNode]:
+def int_(*, nullable: bool = True, default: graphql.ValueNode | None = None) -> st.SearchStrategy[graphql.IntValueNode]:
     return maybe_default(maybe_null(INTEGER_STRATEGY, nullable), default=default)
 
 
 def float_(
-    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    *, nullable: bool = True, default: graphql.ValueNode | None = None
 ) -> st.SearchStrategy[graphql.FloatValueNode]:
     return maybe_default(maybe_null(FLOAT_STRATEGY, nullable), default=default)
 
 
 def string(
-    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None, alphabet: st.SearchStrategy[str]
+    *, nullable: bool = True, default: graphql.ValueNode | None = None, alphabet: st.SearchStrategy[str]
 ) -> st.SearchStrategy[graphql.StringValueNode]:
     return maybe_default(
         maybe_null(st.text(alphabet=alphabet).map(_string), nullable),
@@ -89,13 +89,13 @@ def string(
 
 
 def id_(
-    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None, alphabet: st.SearchStrategy[str]
-) -> st.SearchStrategy[Union[graphql.StringValueNode, graphql.IntValueNode]]:
+    *, nullable: bool = True, default: graphql.ValueNode | None = None, alphabet: st.SearchStrategy[str]
+) -> st.SearchStrategy[graphql.StringValueNode | graphql.IntValueNode]:
     return maybe_default(string(nullable=nullable, alphabet=alphabet) | int_(nullable=nullable), default=default)
 
 
 def boolean(
-    *, nullable: bool = True, default: Optional[graphql.ValueNode] = None
+    *, nullable: bool = True, default: graphql.ValueNode | None = None
 ) -> st.SearchStrategy[graphql.BooleanValueNode]:
     return maybe_default(maybe_null(BOOLEAN_STRATEGY, nullable), default=default)
 
@@ -109,14 +109,12 @@ def maybe_null(strategy: st.SearchStrategy[T], nullable: bool) -> st.SearchStrat
 def custom(
     strategy: st.SearchStrategy,
     nullable: bool = True,
-    default: Optional[graphql.ValueNode] = None,
+    default: graphql.ValueNode | None = None,
 ) -> st.SearchStrategy:
     return maybe_default(maybe_null(strategy, nullable), default=default)
 
 
-def maybe_default(
-    strategy: st.SearchStrategy[T], *, default: Optional[graphql.ValueNode] = None
-) -> st.SearchStrategy[T]:
+def maybe_default(strategy: st.SearchStrategy[T], *, default: graphql.ValueNode | None = None) -> st.SearchStrategy[T]:
     if default is not None:
         strategy |= st.just(default)
     return strategy
@@ -124,9 +122,9 @@ def maybe_default(
 
 @lru_cache(maxsize=64)
 def enum(
-    values: Tuple[str],
+    values: tuple[str],
     nullable: bool = True,
-    default: Optional[graphql.ValueNode] = None,
+    default: graphql.ValueNode | None = None,
 ) -> st.SearchStrategy[graphql.EnumValueNode]:
     return maybe_default(maybe_null(st.sampled_from(values).map(nodes.Enum), nullable), default=default)
 
@@ -134,7 +132,7 @@ def enum(
 def list_(
     strategy: st.SearchStrategy[graphql.ListValueNode],
     nullable: bool = True,
-    default: Optional[graphql.ValueNode] = None,
+    default: graphql.ValueNode | None = None,
 ) -> st.SearchStrategy[graphql.ListValueNode]:
     return maybe_default(maybe_null(strategy.map(nodes.List), nullable), default=default)
 
@@ -179,7 +177,7 @@ def out_of_range_int() -> st.SearchStrategy[graphql.IntValueNode]:
     ).map(nodes.Int)
 
 
-def invalid_enum(valid_values: Tuple[str, ...]) -> st.SearchStrategy[graphql.EnumValueNode]:
+def invalid_enum(valid_values: tuple[str, ...]) -> st.SearchStrategy[graphql.EnumValueNode]:
     # Use only ASCII letters, digits, and underscore to match GraphQL enum syntax
     # Enum values must match /[_A-Za-z][_0-9A-Za-z]*/ pattern
     alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_"

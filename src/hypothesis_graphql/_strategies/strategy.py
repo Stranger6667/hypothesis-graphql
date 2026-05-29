@@ -1,8 +1,11 @@
 # pylint: disable=unused-import
+from __future__ import annotations
+
 import dataclasses
+from collections.abc import Callable, Iterable
 from functools import reduce, wraps
 from operator import or_
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any
 
 import graphql
 from hypothesis import strategies as st
@@ -27,7 +30,7 @@ BUILT_IN_SCALAR_TYPE_NAMES = {"Int", "Float", "String", "ID", "Boolean"}
 def instance_cache(key_func: Callable) -> Callable:
     def decorator(method: Callable) -> Callable:
         @wraps(method)
-        def wrapped(self: "GraphQLStrategy", *args: Any, **kwargs: Any) -> st.SearchStrategy:
+        def wrapped(self: GraphQLStrategy, *args: Any, **kwargs: Any) -> st.SearchStrategy:
             key = key_func(*args, **kwargs)
             memo = self._cache.setdefault(method.__name__, {})
             cached = memo.get(key)
@@ -42,7 +45,7 @@ def instance_cache(key_func: Callable) -> Callable:
     return decorator
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class GraphQLStrategy:
     """Strategy for generating various GraphQL nodes."""
 
@@ -52,12 +55,12 @@ class GraphQLStrategy:
     allow_null: bool = True
     # As the schema is assumed to be immutable, there are a few strategy caches possible for internal components
     # This is a per-method cache without limits as they are proportionate to the schema size
-    _cache: Dict[str, Dict] = dataclasses.field(default_factory=dict)
+    _cache: dict[str, dict] = dataclasses.field(default_factory=dict)
 
     def values(
         self,
         type_: graphql.GraphQLInputType,
-        default: Optional[graphql.ValueNode] = None,
+        default: graphql.ValueNode | None = None,
     ) -> st.SearchStrategy[InputTypeNode]:
         """Generate value nodes for a `GraphQLInputType` (scalar/enum/list/input object)."""
         type_, nullable = check_nullable(type_)
@@ -91,7 +94,7 @@ class GraphQLStrategy:
         self,
         type_: graphql.GraphQLList,
         nullable: bool = True,
-        default: Optional[graphql.ValueNode] = None,
+        default: graphql.ValueNode | None = None,
     ) -> st.SearchStrategy[graphql.ListValueNode]:
         """Generate a `graphql.ListValueNode`."""
         strategy = st.lists(self.values(type_.of_type))
@@ -126,8 +129,8 @@ class GraphQLStrategy:
         )
 
     def lists_of_object_fields(
-        self, items: List[Tuple[str, graphql.GraphQLInputField]]
-    ) -> st.SearchStrategy[List[graphql.ObjectFieldNode]]:
+        self, items: list[tuple[str, graphql.GraphQLInputField]]
+    ) -> st.SearchStrategy[list[graphql.ObjectFieldNode]]:
         return st.tuples(
             *(
                 self.values(
@@ -139,14 +142,14 @@ class GraphQLStrategy:
         ).map(list)
 
     def list_of_arguments(
-        self, arguments: Dict[str, graphql.GraphQLArgument]
-    ) -> st.SearchStrategy[List[graphql.ArgumentNode]]:
+        self, arguments: dict[str, graphql.GraphQLArgument]
+    ) -> st.SearchStrategy[list[graphql.ArgumentNode]]:
         """Generate a list `graphql.ArgumentNode` for a field."""
         if not arguments:
             return st.just([])
 
         @st.composite  # type: ignore
-        def inner(draw: st.DrawFn) -> List[graphql.ArgumentNode]:
+        def inner(draw: st.DrawFn) -> list[graphql.ArgumentNode]:
             args = []
             for name, argument in arguments.items():
                 default = argument.ast_node.default_value if argument.ast_node is not None else None
@@ -165,7 +168,7 @@ class GraphQLStrategy:
         return inner()
 
 
-def check_nullable(type_: graphql.GraphQLInputType) -> Tuple[graphql.GraphQLInputType, bool]:
+def check_nullable(type_: graphql.GraphQLInputType) -> tuple[graphql.GraphQLInputType, bool]:
     """Get the wrapped type and detect if it is nullable."""
     nullable = True
     if isinstance(type_, graphql.GraphQLNonNull):
@@ -192,12 +195,11 @@ def make_type_name(type_: graphql.GraphQLType) -> str:
 
 
 def subset_of_fields(
-    fields: Dict[str, graphql.GraphQLInputField], *, force_required: bool = False
-) -> st.SearchStrategy[List[Tuple[str, graphql.GraphQLInputField]]]:
+    fields: dict[str, graphql.GraphQLInputField], *, force_required: bool = False
+) -> st.SearchStrategy[list[tuple[str, graphql.GraphQLInputField]]]:
     """A helper to select a subset of fields."""
     if not fields:
-        # The schema is invalid as there should be at least one field
-        # But there should not be an internal error because of it
+        # Nothing selectable, e.g. an input object whose fields are all optional and not generatable
         return EMPTY_LISTS_STRATEGY
     field_pairs = sorted(fields.items())
     # if we need to always generate required fields, then return them and extend with a subset of optional fields
@@ -221,12 +223,12 @@ def _make_strategy(
     schema: graphql.GraphQLSchema,
     *,
     type_: graphql.GraphQLObjectType,
-    fields: Optional[Iterable[str]] = None,
-    custom_scalars: Optional[CustomScalarStrategies] = None,
+    fields: Iterable[str] | None = None,
+    custom_scalars: CustomScalarStrategies | None = None,
     alphabet: st.SearchStrategy[str],
     allow_null: bool = True,
     mode: Mode = Mode.POSITIVE,
-) -> st.SearchStrategy[List[graphql.FieldNode]]:
+) -> st.SearchStrategy[list[graphql.FieldNode]]:
     """Create strategy for GraphQL selections (query/mutation fields)."""
     from .builder import build_selection_set
     from .negative_sites import negative_selection
@@ -249,7 +251,7 @@ def _make_strategy(
     return selection.map(lambda sel_nodes: build_selection_set(sel_nodes, type_map=schema.type_map).selections)
 
 
-def _build_alphabet(allow_x00: bool = True, codec: Optional[str] = "utf-8") -> st.SearchStrategy[str]:
+def _build_alphabet(allow_x00: bool = True, codec: str | None = "utf-8") -> st.SearchStrategy[str]:
     return st.characters(
         codec=codec, min_codepoint=0 if allow_x00 else 1, max_codepoint=0xFFFF, blacklist_categories=["Cs"]
     )
@@ -257,14 +259,14 @@ def _build_alphabet(allow_x00: bool = True, codec: Optional[str] = "utf-8") -> s
 
 @cacheable  # type: ignore
 def queries(
-    schema: Union[str, graphql.GraphQLSchema],
+    schema: str | graphql.GraphQLSchema,
     *,
-    fields: Optional[Iterable[str]] = None,
-    custom_scalars: Optional[CustomScalarStrategies] = None,
+    fields: Iterable[str] | None = None,
+    custom_scalars: CustomScalarStrategies | None = None,
     print_ast: AstPrinter = graphql.print_ast,
     allow_x00: bool = True,
     allow_null: bool = True,
-    codec: Optional[str] = "utf-8",
+    codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[str]:
     r"""A strategy for generating queries for the given GraphQL schema.
@@ -302,14 +304,14 @@ def queries(
 
 @cacheable  # type: ignore
 def mutations(
-    schema: Union[str, graphql.GraphQLSchema],
+    schema: str | graphql.GraphQLSchema,
     *,
-    fields: Optional[Iterable[str]] = None,
-    custom_scalars: Optional[CustomScalarStrategies] = None,
+    fields: Iterable[str] | None = None,
+    custom_scalars: CustomScalarStrategies | None = None,
     print_ast: AstPrinter = graphql.print_ast,
     allow_x00: bool = True,
     allow_null: bool = True,
-    codec: Optional[str] = "utf-8",
+    codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[str]:
     r"""A strategy for generating mutations for the given GraphQL schema.
@@ -347,14 +349,14 @@ def mutations(
 
 @cacheable  # type: ignore
 def from_schema(
-    schema: Union[str, graphql.GraphQLSchema],
+    schema: str | graphql.GraphQLSchema,
     *,
-    fields: Optional[Iterable[str]] = None,
-    custom_scalars: Optional[CustomScalarStrategies] = None,
+    fields: Iterable[str] | None = None,
+    custom_scalars: CustomScalarStrategies | None = None,
     print_ast: AstPrinter = graphql.print_ast,
     allow_x00: bool = True,
     allow_null: bool = True,
-    codec: Optional[str] = "utf-8",
+    codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[str]:
     r"""A strategy for generating queries and mutations for the given GraphQL schema.

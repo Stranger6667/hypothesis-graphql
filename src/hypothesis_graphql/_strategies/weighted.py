@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from hypothesis import strategies as st
@@ -11,7 +13,7 @@ class _WeightedBoolean(st.SearchStrategy):
         super().__init__()
         self.p = p
 
-    def do_draw(self, data: "ConjectureData") -> bool:
+    def do_draw(self, data: ConjectureData) -> bool:
         return data.draw_boolean(self.p)
 
 

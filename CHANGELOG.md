@@ -10,6 +10,10 @@
 
 - Much faster generation - up to ~180x on large and negative-mode cases.
 
+### Removed
+
+- Python 3.8 and 3.9 support.
+
 ## [0.12.0] - 2026-02-04
 
 ### Added

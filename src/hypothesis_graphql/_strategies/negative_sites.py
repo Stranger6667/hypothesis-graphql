@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import dataclasses
-from typing import List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import graphql
 from hypothesis import strategies as st
@@ -15,20 +17,20 @@ BUILT_IN = {"Int", "Float", "String", "ID", "Boolean"}
 MAX_DEPTH = 10
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class PathStep:
     field_name: str
-    on_type: Optional[str]
+    on_type: str | None
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, slots=True)
 class ViolationSite:
-    path: Tuple[PathStep, ...]
+    path: tuple[PathStep, ...]
     arg_name: str
-    kinds: Tuple[str, ...]
+    kinds: tuple[str, ...]
 
     @property
-    def field_path(self) -> Tuple[str, ...]:
+    def field_path(self) -> tuple[str, ...]:
         return tuple(step.field_name for step in self.path)
 
     @property
@@ -36,8 +38,8 @@ class ViolationSite:
         return len(self.path)
 
 
-def _arg_kinds(arg: graphql.GraphQLArgument) -> Tuple[str, ...]:
-    kinds: List[str] = []
+def _arg_kinds(arg: graphql.GraphQLArgument) -> tuple[str, ...]:
+    kinds: list[str] = []
     required = isinstance(arg.type, graphql.GraphQLNonNull)
     inner = unwrap(arg.type)
     if required:
@@ -55,13 +57,13 @@ def _arg_kinds(arg: graphql.GraphQLArgument) -> Tuple[str, ...]:
     return tuple(kinds)
 
 
-def enumerate_violation_sites(schema: graphql.GraphQLSchema, root: graphql.GraphQLNamedType) -> List[ViolationSite]:
+def enumerate_violation_sites(schema: graphql.GraphQLSchema, root: graphql.GraphQLNamedType) -> list[ViolationSite]:
     # One representative path per type. Enumerating every route explodes combinatorially on
     # dense recursive schemas; we only need a reachable path to each violatable field.
-    sites: List[ViolationSite] = []
+    sites: list[ViolationSite] = []
     walked: set = set()
 
-    def walk(type_: graphql.GraphQLNamedType, path: Tuple[PathStep, ...]) -> None:
+    def walk(type_: graphql.GraphQLNamedType, path: tuple[PathStep, ...]) -> None:
         if type_.name in walked or len(path) > MAX_DEPTH:
             return
         walked.add(type_.name)
@@ -80,7 +82,7 @@ def enumerate_violation_sites(schema: graphql.GraphQLSchema, root: graphql.Graph
 
 
 def _find_field(
-    schema: graphql.GraphQLSchema, type_: graphql.GraphQLNamedType, name: str, on_type: Optional[str]
+    schema: graphql.GraphQLSchema, type_: graphql.GraphQLNamedType, name: str, on_type: str | None
 ) -> graphql.GraphQLField:
     # The (name, on_type) pair always comes from a previously enumerated path, so it is present.
     return next(
@@ -124,7 +126,7 @@ def _violation_value(
 
 def _corrupt_args(
     draw: st.DrawFn, gql: GraphQLStrategy, field: graphql.GraphQLField, target_arg: str, kind: str
-) -> List[graphql.ArgumentNode]:
+) -> list[graphql.ArgumentNode]:
     others = {name: arg for name, arg in field.args.items() if name != target_arg}
     args = list(draw(gql.list_of_arguments(others)))
     if kind == "missing_required":
@@ -141,7 +143,7 @@ def _extend_to_leaf(
     gql: GraphQLStrategy,
     type_: graphql.GraphQLNamedType,
     seen: frozenset,
-) -> Optional[List[SelectionNode]]:
+) -> list[SelectionNode] | None:
     if type_.name in seen:
         return None
     seen = seen | {type_.name}
@@ -159,10 +161,10 @@ def negative_selection(
     schema: graphql.GraphQLSchema,
     root: graphql.GraphQLObjectType,
     alphabet: st.SearchStrategy[str],
-    custom_scalars: Optional[dict] = None,
+    custom_scalars: dict | None = None,
     allow_null: bool = True,
-    fields: Optional[Sequence[str]] = None,
-) -> st.SearchStrategy[List[SelectionNode]]:
+    fields: Sequence[str] | None = None,
+) -> st.SearchStrategy[list[SelectionNode]]:
     # Enumerated once per strategy build; the strategy itself is constructed once.
     sites = enumerate_violation_sites(schema, root)
     if fields is not None:
@@ -171,7 +173,7 @@ def negative_selection(
     gql = GraphQLStrategy(schema=schema, alphabet=alphabet, custom_scalars=custom_scalars or {}, allow_null=allow_null)
 
     @st.composite  # type: ignore
-    def _generate(draw: st.DrawFn) -> List[SelectionNode]:
+    def _generate(draw: st.DrawFn) -> list[SelectionNode]:
         if not sites:
             raise InvalidArgument(
                 "Cannot generate invalid queries in NEGATIVE mode: schema has no required "

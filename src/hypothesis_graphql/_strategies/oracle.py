@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import dataclasses
 import math
-from typing import Dict, List, Optional, Tuple
 
 import graphql
 
-Selectable = Tuple[str, graphql.GraphQLField, Optional[str]]
+Selectable = tuple[str, graphql.GraphQLField, str | None]
 
 
 def unwrap(type_: graphql.GraphQLType) -> graphql.GraphQLNamedType:
@@ -17,8 +18,8 @@ def is_leaf(type_: graphql.GraphQLNamedType) -> bool:
     return isinstance(type_, (graphql.GraphQLScalarType, graphql.GraphQLEnumType))
 
 
-def selectable_fields(schema: graphql.GraphQLSchema, type_: graphql.GraphQLNamedType) -> List[Selectable]:
-    out: List[Selectable] = []
+def selectable_fields(schema: graphql.GraphQLSchema, type_: graphql.GraphQLNamedType) -> list[Selectable]:
+    out: list[Selectable] = []
     if isinstance(type_, graphql.GraphQLObjectType):
         for name, field in type_.fields.items():
             out.append((name, field, None))
@@ -57,13 +58,13 @@ def _reachable_composites(schema: graphql.GraphQLSchema, roots: frozenset) -> se
 
 
 # type name -> list of (is_leaf, target type name) for each selectable field
-FieldTerms = Dict[str, List[Tuple[bool, str]]]
+FieldTerms = dict[str, list[tuple[bool, str]]]
 
 
 def _field_terms(schema: graphql.GraphQLSchema, types: set) -> FieldTerms:
     terms: FieldTerms = {}
     for name in types:
-        row: List[Tuple[bool, str]] = []
+        row: list[tuple[bool, str]] = []
         for _name, field, _on_type in selectable_fields(schema, schema.get_type(name)):
             target = unwrap(field.type)
             row.append((True, "") if is_leaf(target) else (False, target.name))
@@ -71,7 +72,7 @@ def _field_terms(schema: graphql.GraphQLSchema, types: set) -> FieldTerms:
     return terms
 
 
-def _solve(types: set, terms: FieldTerms, x: float) -> Dict[str, float]:
+def _solve(types: set, terms: FieldTerms, x: float) -> dict[str, float]:
     # Fixpoint of y_T = product over selectable fields of (1 + phi); non-convergence within
     # MAX_ITERS is treated as past the singularity (OverflowError), so callers back x off.
     y = dict.fromkeys(types, 0.0)
@@ -91,12 +92,12 @@ def _solve(types: set, terms: FieldTerms, x: float) -> Dict[str, float]:
     raise OverflowError("no convergence")
 
 
-def selset_values(schema: graphql.GraphQLSchema, roots: frozenset, x: float) -> Dict[str, float]:
+def selset_values(schema: graphql.GraphQLSchema, roots: frozenset, x: float) -> dict[str, float]:
     types = _reachable_composites(schema, roots)
     return _solve(types, _field_terms(schema, types), x)
 
 
-def min_depths(schema: graphql.GraphQLSchema) -> Dict[str, Optional[int]]:
+def min_depths(schema: graphql.GraphQLSchema) -> dict[str, int | None]:
     # Shortest number of selection levels from a type to a leaf field; None if unreachable.
     # Bellman-Ford-style fixpoint over the type graph -- order-independent.
     composites = [
@@ -104,7 +105,7 @@ def min_depths(schema: graphql.GraphQLSchema) -> Dict[str, Optional[int]]:
         for name, type_ in schema.type_map.items()
         if isinstance(type_, (graphql.GraphQLObjectType, graphql.GraphQLInterfaceType, graphql.GraphQLUnionType))
     ]
-    depth: Dict[str, Optional[int]] = dict.fromkeys(composites)
+    depth: dict[str, int | None] = dict.fromkeys(composites)
     changed = True
     while changed:
         changed = False
@@ -113,7 +114,7 @@ def min_depths(schema: graphql.GraphQLSchema) -> Dict[str, Optional[int]]:
             for _name, field, _on_type in selectable_fields(schema, schema.get_type(name)):
                 target = unwrap(field.type)
                 if is_leaf(target):
-                    candidate: Optional[int] = 1
+                    candidate: int | None = 1
                 else:
                     child_depth = depth.get(target.name)
                     candidate = None if child_depth is None else child_depth + 1
@@ -125,14 +126,14 @@ def min_depths(schema: graphql.GraphQLSchema) -> Dict[str, Optional[int]]:
     return depth
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(slots=True)
 class Oracle:
     schema: graphql.GraphQLSchema
     x: float
-    y: Dict[str, float]
+    y: dict[str, float]
 
-    def inclusion_probabilities(self, type_name: str) -> Dict[Tuple[str, Optional[str]], float]:
-        out: Dict[Tuple[str, Optional[str]], float] = {}
+    def inclusion_probabilities(self, type_name: str) -> dict[tuple[str, str | None], float]:
+        out: dict[tuple[str, str | None], float] = {}
         for name, field, on_type in selectable_fields(self.schema, self.schema.get_type(type_name)):
             target = unwrap(field.type)
             phi = self.x if is_leaf(target) else self.x * (self.y.get(target.name, 0.0) - 1.0)

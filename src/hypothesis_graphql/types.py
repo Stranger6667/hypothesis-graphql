@@ -1,23 +1,13 @@
-from typing import Callable, Dict, List, Union
+from collections.abc import Callable
 
 import graphql
 from hypothesis import strategies as st
 
 # Leaf nodes, that don't have children
-ScalarValueNode = Union[
-    graphql.IntValueNode,
-    graphql.FloatValueNode,
-    graphql.StringValueNode,
-    graphql.BooleanValueNode,
-]
-InputTypeNode = Union[
-    ScalarValueNode,
-    graphql.EnumValueNode,
-    graphql.ListValueNode,
-    graphql.ObjectValueNode,
-]
-Field = Union[graphql.GraphQLField, graphql.GraphQLInputField]
-InterfaceOrObject = Union[graphql.GraphQLObjectType, graphql.GraphQLInterfaceType]
-SelectionNodes = List[graphql.SelectionNode]
+ScalarValueNode = graphql.IntValueNode | graphql.FloatValueNode | graphql.StringValueNode | graphql.BooleanValueNode
+InputTypeNode = ScalarValueNode | graphql.EnumValueNode | graphql.ListValueNode | graphql.ObjectValueNode
+Field = graphql.GraphQLField | graphql.GraphQLInputField
+InterfaceOrObject = graphql.GraphQLObjectType | graphql.GraphQLInterfaceType
+SelectionNodes = list[graphql.SelectionNode]
 AstPrinter = Callable[[graphql.Node], str]
-CustomScalarStrategies = Dict[str, st.SearchStrategy[graphql.ValueNode]]
+CustomScalarStrategies = dict[str, st.SearchStrategy[graphql.ValueNode]]

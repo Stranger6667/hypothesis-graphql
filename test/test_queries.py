@@ -180,6 +180,18 @@ def test_missing_query():
         queries(schema)
 
 
+def test_input_object_with_no_generatable_fields(validate_operation):
+    # An input object whose fields are all optional and reference an unknown custom scalar has no
+    # generatable fields, so it is emitted as an empty object literal rather than failing.
+    schema = """
+scalar Custom
+input Filter { a: Custom  b: [Custom] }
+type Query { search(filter: Filter): Int }
+"""
+    query = find(queries(schema), lambda q: "filter: {}" in q)
+    validate_operation(schema, query)
+
+
 def test_unknown_type(simple_schema):
     # If there will be a new input type in `graphql`
 

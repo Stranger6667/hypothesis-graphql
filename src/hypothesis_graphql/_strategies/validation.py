@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from __future__ import annotations
 
 import graphql
 from hypothesis import strategies as st
@@ -8,13 +8,13 @@ from ..cache import cached_build_schema
 from ..types import CustomScalarStrategies
 
 
-def maybe_parse_schema(schema: Union[str, graphql.GraphQLSchema]) -> graphql.GraphQLSchema:
+def maybe_parse_schema(schema: str | graphql.GraphQLSchema) -> graphql.GraphQLSchema:
     if isinstance(schema, str):
         return cached_build_schema(schema)
     return schema
 
 
-def validate_fields(fields_: Tuple[str, ...], available_fields: List[str]) -> None:
+def validate_fields(fields_: tuple[str, ...], available_fields: list[str]) -> None:
     if not fields_:
         raise ValueError("If you pass `fields`, it should not be empty")
     invalid_fields = tuple(field for field in fields_ if field not in available_fields)

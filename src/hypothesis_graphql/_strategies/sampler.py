@@ -1,4 +1,6 @@
-from typing import List, Optional, Sequence
+from __future__ import annotations
+
+from collections.abc import Sequence
 
 import graphql
 from hypothesis import strategies as st
@@ -17,10 +19,10 @@ def positive_selection(
     schema: graphql.GraphQLSchema,
     root: graphql.GraphQLObjectType,
     alphabet: st.SearchStrategy[str],
-    custom_scalars: Optional[CustomScalarStrategies] = None,
+    custom_scalars: CustomScalarStrategies | None = None,
     allow_null: bool = True,
-    fields: Optional[Sequence[str]] = None,
-) -> st.SearchStrategy[List[SelectionNode]]:
+    fields: Sequence[str] | None = None,
+) -> st.SearchStrategy[list[SelectionNode]]:
     depths = min_depths(schema)
     # Adaptive expected size: richer queries on larger schemas so big graphs are not under-explored.
     target_size = max(8.0, min(40.0, len(depths) * 0.4))
@@ -32,19 +34,19 @@ def positive_selection(
         md = depths.get(target.name)
         return md is not None and depth + md <= MAX_DEPTH
 
-    def fields_at(type_: graphql.GraphQLNamedType, depth: int) -> List[Selectable]:
+    def fields_at(type_: graphql.GraphQLNamedType, depth: int) -> list[Selectable]:
         items = selectable_fields(schema, type_)
         if depth == 0 and allowed_root is not None:
             items = [item for item in items if item[0] in allowed_root]
         return items
 
     @st.composite  # type: ignore
-    def _generate(draw: st.DrawFn) -> List[SelectionNode]:
+    def _generate(draw: st.DrawFn) -> list[SelectionNode]:
         counter = [0]
 
-        def select(type_: graphql.GraphQLNamedType, depth: int) -> List[SelectionNode]:
+        def select(type_: graphql.GraphQLNamedType, depth: int) -> list[SelectionNode]:
             probs = oracle.inclusion_probabilities(type_.name)
-            chosen: List[Selectable] = []
+            chosen: list[Selectable] = []
             for name, field, on_type in fields_at(type_, depth):
                 target = unwrap(field.type)
                 if not is_leaf(target) and not ok_composite(target, depth):
@@ -56,7 +58,7 @@ def positive_selection(
                     chosen.append((name, field, on_type))
                     counter[0] += 1
             if not chosen:
-                valid: List[Selectable] = []
+                valid: list[Selectable] = []
                 for name, field, on_type in fields_at(type_, depth):
                     target = unwrap(field.type)
                     if is_leaf(target):
@@ -69,7 +71,7 @@ def positive_selection(
                     return []
                 chosen = [valid[0]]
                 counter[0] += 1
-            nodes: List[SelectionNode] = []
+            nodes: list[SelectionNode] = []
             for name, field, on_type in chosen:
                 target = unwrap(field.type)
                 children = [] if is_leaf(target) else select(target, depth + 1)
