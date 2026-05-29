@@ -2,6 +2,14 @@
 
 ## [Unreleased] - TBD
 
+### Changed
+
+- More even field and violation distribution across schema depth.
+
+### Performance
+
+- Much faster generation - up to ~180x on large and negative-mode cases.
+
 ## [0.12.0] - 2026-02-04
 
 ### Added
