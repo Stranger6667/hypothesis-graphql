@@ -60,7 +60,7 @@ source = ["src", ".tox/*/site-packages"]
 show_missing = true
 skip_covered = true
 precision = 2
-exclude_lines = ["raise NotImplementedError", "if TYPE_CHECKING:", "pass"]
+exclude_lines = ["pragma: no cover", "raise NotImplementedError", "if TYPE_CHECKING:", "pass"]
 
 [tool.ruff]
 line-length = 120

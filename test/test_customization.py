@@ -47,21 +47,19 @@ def test_custom_scalar_argument_nullable(validate_operation):
     # And is nullable
     # And there are no other arguments
 
-    num_of_queries = 0
+    distinct = set()
 
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date): Object")
 
     @given(query=queries(schema))
     def test(query):
-        nonlocal num_of_queries
-
-        num_of_queries += 1
+        distinct.add(query)
         validate_operation(schema, query)
         assert "getByDate {" in query or "getByDate(created: null)" in query
 
     test()
-    # Then only two queries should be generated - no fields, and `created: null`
-    assert num_of_queries == 2
+    # Then only two distinct queries are possible - no argument, and `created: null`
+    assert len(distinct) == 2
 
 
 @pytest.mark.parametrize("input_type", ("Date", "RequiredQueryInput"))

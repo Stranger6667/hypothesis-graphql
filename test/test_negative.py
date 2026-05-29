@@ -561,7 +561,7 @@ def test_negative_with_only_custom_scalars_fails():
     }
     """
 
-    with pytest.raises(InvalidArgument, match="Scalar 'DateTime' is not supported"):
+    with pytest.raises(InvalidArgument, match="Cannot generate invalid queries in NEGATIVE mode"):
         find(queries(schema, mode=Mode.NEGATIVE), lambda q: True, settings=settings(max_examples=10))
 
 
@@ -597,3 +597,41 @@ def test_negative_with_allow_null_false():
 
     for query in query_list:
         assert_query_invalid(query, schema)
+
+
+def test_negative_leafless_composite_return():
+    # `f` returns A, but A <-> B cycle has no scalar leaf, so the forced selection cannot be
+    # extended to a leaf; the query is still invalid via the argument violation.
+    schema = """
+    type Query { f(x: Int!): A }
+    type A { b: B }
+    type B { a: A }
+    """
+    query = find(queries(schema, mode=Mode.NEGATIVE), lambda q: True, settings=settings(max_examples=50))
+    assert_query_invalid(query, schema)
+
+
+def test_negative_composite_return_extends_to_nested_leaf():
+    # `f` returns A which has no direct scalar field; the forced selection is extended
+    # through `deep` to the leaf on B.
+    schema = """
+    type Query { f(x: Int!): A }
+    type A { deep: B }
+    type B { id: ID }
+    """
+    query = find(queries(schema, mode=Mode.NEGATIVE), lambda q: True, settings=settings(max_examples=50))
+    assert_query_invalid(query, schema)
+    assert "deep" in query and "id" in query
+
+
+def test_negative_with_fields_restriction():
+    schema = """
+    type Query {
+        first(a: Int!): String
+        second(b: Int!): String
+    }
+    """
+    query_list = generate_multiple_queries(schema, queries(schema, fields=["first"], mode=Mode.NEGATIVE), count=10)
+    for query in query_list:
+        assert_query_invalid(query, schema)
+        assert "second" not in query
