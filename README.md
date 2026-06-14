@@ -151,7 +151,7 @@ Use the `mode=Mode.NEGATIVE` parameter to generate queries that should be reject
 
 ```python
 from hypothesis import given
-from hypothesis_graphql import queries, mode
+from hypothesis_graphql import queries, Mode
 import requests
 
 SCHEMA = """
