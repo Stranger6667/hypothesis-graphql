@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: actions/setup-python@v6.2.0
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.14"
 
@@ -39,7 +39,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: actions/setup-python@v6.2.0
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.14"
 
@@ -60,7 +60,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: actions/setup-python@v6.2.0
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: ${{ matrix.python }}
 
