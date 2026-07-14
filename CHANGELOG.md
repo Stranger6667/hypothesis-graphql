@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Performance
+
+- Cache `min_depths` and `build_oracle` per schema instead of recomputing them for every root field.
+
 ## [0.13.0] - 2026-05-29
 
 ### Changed
