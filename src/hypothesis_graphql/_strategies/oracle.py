@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import math
+from functools import lru_cache
 
 import graphql
 
@@ -97,6 +98,7 @@ def selset_values(schema: graphql.GraphQLSchema, roots: frozenset, x: float) -> 
     return _solve(types, _field_terms(schema, types), x)
 
 
+@lru_cache(maxsize=32)
 def min_depths(schema: graphql.GraphQLSchema) -> dict[str, int | None]:
     # Shortest number of selection levels from a type to a leaf field; None if unreachable.
     # Bellman-Ford-style fixpoint over the type graph -- order-independent.
@@ -142,6 +144,12 @@ class Oracle:
 
 
 def build_oracle(schema: graphql.GraphQLSchema, roots: frozenset, target_size: float = 8.0) -> Oracle:
+    # `roots` may arrive as a plain `set`; normalize before it hits the cache key below.
+    return _build_oracle_cached(schema, frozenset(roots), target_size)
+
+
+@lru_cache(maxsize=32)
+def _build_oracle_cached(schema: graphql.GraphQLSchema, roots: frozenset, target_size: float) -> Oracle:
     # Precompute field terms once; the binary search below reuses them across all solves.
     types = _reachable_composites(schema, roots)
     terms = _field_terms(schema, types)

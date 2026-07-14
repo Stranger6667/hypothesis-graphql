@@ -1,6 +1,6 @@
 import graphql
 
-from hypothesis_graphql._strategies.oracle import min_depths, selectable_fields
+from hypothesis_graphql._strategies.oracle import build_oracle, min_depths, selectable_fields
 
 
 def schema(sdl):
@@ -49,11 +49,21 @@ def test_selset_values_recursive_converges_below_rho():
 
 
 def test_build_oracle_returns_probabilities():
-    from hypothesis_graphql._strategies.oracle import build_oracle
-
     s = schema("type Query { a: Int b: String c: Query }")
     oracle = build_oracle(s, {"Query"}, target_size=3.0)
     probs = oracle.inclusion_probabilities("Query")
     assert set(probs) == {("a", None), ("b", None), ("c", None)}
     assert all(0.0 < p < 1.0 for p in probs.values())
     assert probs[("c", None)] > 0.05  # composite self-field not p^d-collapsed
+
+
+def test_min_depths_is_cached_per_schema():
+    s = schema("type Query { a: A } type A { f: String g: A }")
+    assert min_depths(s) is min_depths(s)
+
+
+def test_build_oracle_is_cached_per_schema_and_roots():
+    s = schema("type Query { a: Int b: String c: Query }")
+    first = build_oracle(s, frozenset({"Query"}), target_size=3.0)
+    second = build_oracle(s, frozenset({"Query"}), target_size=3.0)
+    assert first is second
