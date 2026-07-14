@@ -2,6 +2,8 @@
 
 ## [Unreleased] - TBD
 
+## [0.13.1] - 2026-07-14
+
 ### Performance
 
 - Cache `min_depths` and `build_oracle` per schema instead of recomputing them for every root field.
@@ -234,7 +236,8 @@ Invalid queries:
 
 - Initial public release
 
-[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.11.0...v0.11.1
