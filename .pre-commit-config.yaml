@@ -25,14 +25,14 @@ repos:
       - id: yamllint
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.2.0
+    rev: v2.3.0
     hooks:
       - id: mypy
         exclude: ^(docs/|test/|benchmarks/).*$
         args: ["--ignore-missing-imports"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.21
+    rev: v0.15.22
     hooks:
       - id: ruff-format
       - id: ruff-check
