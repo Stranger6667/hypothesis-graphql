@@ -42,6 +42,7 @@ def test_all_negative_queries_are_invalid(data):
     type Query {
         test(value: Int!): String
         getUser(id: ID!): String
+        withDefault(value: Int! = 1): String
     }
     """
     parsed_schema = graphql.build_schema(schema)

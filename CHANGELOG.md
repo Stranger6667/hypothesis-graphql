@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Fixed
+
+- Valid queries in `NEGATIVE` mode when a non-null argument has a default value.
+
 ## [0.13.1] - 2026-07-14
 
 ### Performance

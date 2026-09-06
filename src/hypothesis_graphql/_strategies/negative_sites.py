@@ -40,10 +40,12 @@ class ViolationSite:
 
 def _arg_kinds(arg: graphql.GraphQLArgument) -> tuple[str, ...]:
     kinds: list[str] = []
-    required = isinstance(arg.type, graphql.GraphQLNonNull)
     inner = unwrap(arg.type)
-    if required:
-        kinds.extend(("missing_required", "null"))
+    # An argument with a default may be omitted, but an explicit `null` still violates its non-null type.
+    if graphql.is_required_argument(arg):
+        kinds.append("missing_required")
+    if graphql.is_non_null_type(arg.type):
+        kinds.append("null")
     if isinstance(inner, graphql.GraphQLScalarType) and inner.name in BUILT_IN:
         kinds.append("wrong_type")
         if inner.name == "Int":

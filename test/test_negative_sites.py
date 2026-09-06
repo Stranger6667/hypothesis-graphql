@@ -33,6 +33,45 @@ def test_negative_query_is_invalid_at_depth():
     run()
 
 
+def test_negative_query_with_defaulted_argument_is_invalid():
+    # An argument with a default may be omitted, so omitting it leaves the document valid.
+    s = graphql.build_schema("input Filter { term: String } type Query { book(filter: Filter! = {}): String }")
+
+    @given(data=st.data())
+    @settings(max_examples=80, suppress_health_check=list(HealthCheck), deadline=None, phases=[Phase.generate])
+    def run(data):
+        nodes = data.draw(negative_selection(s, s.query_type, _build_alphabet()))
+        doc = _doc(nodes, s)
+        assert graphql.validate(s, doc), graphql.print_ast(doc)
+
+    run()
+
+
+def test_defaulted_argument_is_not_missing_required():
+    sites = sites_for(
+        """
+        type Query {
+          required(value: Int!): String
+          defaulted(value: Int! = 1): String
+        }
+        """
+    )
+    assert {(s.field_path, s.arg_name): s.kinds for s in sites} == {
+        (("required",), "value"): ("missing_required", "null", "wrong_type", "out_of_range"),
+        (("defaulted",), "value"): ("null", "wrong_type", "out_of_range"),
+    }
+
+
+def test_defaulted_input_field_is_not_missing_input_field():
+    sites = sites_for(
+        """
+        input Bag { item: String! = "x" }
+        type Query { take(bag: Bag!): String }
+        """
+    )
+    assert {(s.field_path, s.arg_name): s.kinds for s in sites} == {(("take",), "bag"): ("missing_required", "null")}
+
+
 def test_enumerates_root_level_argument_sites():
     sites = sites_for(
         """
