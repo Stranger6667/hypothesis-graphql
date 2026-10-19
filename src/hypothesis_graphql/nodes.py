@@ -5,6 +5,8 @@ from functools import lru_cache
 
 import graphql
 
+from ._compat import ast_sequence
+
 # These types are not cache-efficient.
 # Constructors are passed as locals to optimize the byte code a little
 
@@ -31,14 +33,14 @@ def Object(
     fields: list[graphql.ObjectFieldNode],
     ObjectValueNode: type[graphql.ObjectValueNode] = graphql.ObjectValueNode,
 ) -> graphql.ObjectValueNode:
-    return ObjectValueNode(fields=fields)
+    return ObjectValueNode(fields=ast_sequence(fields))
 
 
 def List(
     values: list[graphql.ValueNode],
     ListValueNode: type[graphql.ListValueNode] = graphql.ListValueNode,
 ) -> graphql.ListValueNode:
-    return ListValueNode(values=values)
+    return ListValueNode(values=ast_sequence(values))
 
 
 # Boolean & Enum nodes have a limited set of variants, therefore caching is effective in this case

@@ -188,7 +188,7 @@ scalar Custom
 input Filter { a: Custom  b: [Custom] }
 type Query { search(filter: Filter): Int }
 """
-    query = find(queries(schema), lambda q: "filter: {}" in q)
+    query = find(queries(schema), lambda q: "filter:{}" in q.replace(" ", ""))
     validate_operation(schema, query)
 
 

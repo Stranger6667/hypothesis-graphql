@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Changed
+
+- Support `graphql-core` 3.3 alongside 3.1 and 3.2. [#245](https://github.com/Stranger6667/hypothesis-graphql/issues/245)
+
 ## [0.13.2] - 2026-09-06
 
 ### Fixed

@@ -107,7 +107,7 @@ def _input_missing_required(
             fields.append(
                 graphql.ObjectFieldNode(name=graphql.NameNode(value=name), value=draw(gql.values(field.type)))
             )
-    return graphql.ObjectValueNode(fields=tuple(fields))
+    return nodes.Object(fields)
 
 
 def _violation_value(
