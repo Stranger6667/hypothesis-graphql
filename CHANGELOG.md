@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- Support for Python 3.15.
+
 ### Changed
 
 - Support `graphql-core` 3.3 alongside 3.1 and 3.2. [#245](https://github.com/Stranger6667/hypothesis-graphql/issues/245)
