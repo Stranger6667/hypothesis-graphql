@@ -8,27 +8,24 @@
 [![License](https://img.shields.io/pypi/l/hypothesis-graphql.svg)](https://opensource.org/licenses/MIT)
 
 <h4 align="center">
-Generate queries matching your GraphQL schema, and use them to verify your backend implementation
+Generate GraphQL queries from your schema and test your server with them
 </h4>
 
-It is a Python library that provides a set of [Hypothesis](https://github.com/HypothesisWorks/hypothesis/tree/master/hypothesis-python) strategies that
-let you write tests parametrized by a source of examples.
-Generated queries have arbitrary depth and may contain any subset of GraphQL types defined in the input schema.
-They expose edge cases in your code that are unlikely to be found otherwise.
+`hypothesis-graphql` gives you [Hypothesis](https://github.com/HypothesisWorks/hypothesis/tree/master/hypothesis-python) strategies that build queries and mutations from a GraphQL schema.
+Each generated operation selects a random subset of fields at random depth and fills arguments with random values.
 
-[Schemathesis](https://github.com/schemathesis/schemathesis) provides a higher-level interface around this library and finds server crashes automatically.
+For a ready-made tool, try [Schemathesis](https://github.com/schemathesis/schemathesis): it runs on top of this library and reports server crashes without any test code.
 
 ## Usage
 
-`hypothesis-graphql` provides the `from_schema` function, which takes a GraphQL schema and returns a Hypothesis strategy for
-GraphQL queries matching the schema:
+`from_schema` takes a schema and returns a strategy that yields queries and mutations as strings:
 
 ```python
 from hypothesis import given
 from hypothesis_graphql import from_schema
 import requests
 
-# Strings and `graphql.GraphQLSchema` are supported
+# A schema string or a `graphql.GraphQLSchema` instance
 SCHEMA = """
 type Book {
   title: String
@@ -54,7 +51,7 @@ type Mutation {
 
 @given(from_schema(SCHEMA))
 def test_graphql(query):
-    # Will generate samples like these:
+    # Generates operations like:
     #
     # {
     #   getBooks {
@@ -72,11 +69,11 @@ def test_graphql(query):
     assert response.json().get("errors") is None
 ```
 
-It is also possible to generate queries or mutations separately with `hypothesis_graphql.queries` and `hypothesis_graphql.mutations`.
+To generate only one kind of operation, use `hypothesis_graphql.queries` or `hypothesis_graphql.mutations`.
 
 ### Customization
 
-To restrict the set of fields in generated operations use the `fields` argument:
+Pass `fields` to limit which root fields appear in generated operations:
 
 ```python
 @given(from_schema(SCHEMA, fields=["getAuthors"]))
@@ -85,10 +82,10 @@ def test_graphql(query):
     ...
 ```
 
-You can customize the string generation with these arguments to `from_schema`:
+Two arguments control generated strings:
 
-- `allow_x00` (default `True`): Determines whether to allow the generation of `\x00` bytes within strings. It is useful to avoid rejecting tests as invalid by some web servers.
-- `codec` (default `utf-8`): Specifies the codec used for generating strings. It helps if you need to restrict the inputs to, for example, the ASCII range.
+- `allow_x00` (default `True`): set it to `False` to keep `\x00` out of strings. Some web servers reject requests that contain it.
+- `codec` (default `utf-8`): generated strings only contain characters this codec can encode. Use `"ascii"` to stay in the ASCII range.
 
 ```python
 @given(from_schema(SCHEMA, allow_x00=False, codec="ascii"))
@@ -97,7 +94,10 @@ def test_graphql(query):
     query.encode("ascii")
 ```
 
-It is also possible to generate custom scalars. For example, `Date`:
+Set `allow_null=False` to keep `null` out of argument values, including nested input fields and list items.
+
+Built-in scalars (`Int`, `Float`, `String`, `ID`, `Boolean`) work out of the box.
+For a custom scalar such as `Date`, pass a strategy that generates AST nodes for it:
 
 ```python
 from hypothesis import strategies as st, given
@@ -115,11 +115,7 @@ type Query {
 @given(
     from_schema(
         SCHEMA,
-        custom_scalars={
-            # Standard scalars work out of the box, for custom ones you need
-            # to pass custom strategies that generate proper AST nodes
-            "Date": st.dates().map(nodes.String)
-        },
+        custom_scalars={"Date": st.dates().map(nodes.String)},
     )
 )
 def test_graphql(query):
@@ -130,9 +126,11 @@ def test_graphql(query):
     ...
 ```
 
-The `hypothesis_graphql.nodes` module includes a few helpers to generate various node types:
+Without a strategy, `hypothesis-graphql` skips optional arguments of that type and raises `hypothesis.errors.InvalidArgument` if a required argument uses it.
 
-- `String` -> `graphql.StringValueNode`
+`hypothesis_graphql.nodes` has helpers that build value nodes:
+
+- `String` -> `graphql.StringValueNode` (converts the value with `str()`)
 - `Float` -> `graphql.FloatValueNode`
 - `Int` -> `graphql.IntValueNode`
 - `Object` -> `graphql.ObjectValueNode`
@@ -141,13 +139,11 @@ The `hypothesis_graphql.nodes` module includes a few helpers to generate various
 - `Enum` -> `graphql.EnumValueNode`
 - `Null` -> `graphql.NullValueNode` (a constant, not a function)
 
-They exist because classes like `graphql.StringValueNode` can't be directly used in `map` calls due to kwarg-only arguments.
+Use them in `map` calls: `graphql.StringValueNode` and friends accept keyword arguments only.
 
 ### Negative Testing
 
-`hypothesis-graphql` supports generating **invalid** GraphQL queries for negative testing. This is useful for testing error handling and validation logic in your GraphQL server.
-
-Use the `mode=Mode.NEGATIVE` parameter to generate queries that should be rejected:
+Pass `mode=Mode.NEGATIVE` to generate operations your server must reject:
 
 ```python
 from hypothesis import given
@@ -168,22 +164,24 @@ type User {
 
 @given(queries(SCHEMA, mode=Mode.NEGATIVE))
 def test_server_rejects_invalid_queries(query):
-    # Generates queries with violations like:
-    # - Wrong types (String where Int expected)
-    # - Missing required arguments
-    # - Out-of-range integers
-    # - Null for non-null fields
-    # - Invalid enum values
+    # Each query violates the schema in exactly one of these ways:
+    # - a value of the wrong type (a string for an `Int`)
+    # - a missing required argument
+    # - an `Int` outside the 32-bit range
+    # - `null` for a non-null argument
+    # - an unknown enum value
+    # - an input object without one of its required fields
     response = requests.post("http://127.0.0.1/graphql", json={"query": query})
 
-    # Server should reject with 400 or return errors
+    # The server must answer with an error status or an `errors` list
     if response.status_code == 200:
         assert "errors" in response.json()
 ```
 
-The `mode` parameter works with `queries()`, `mutations()`, and `from_schema()`.
+`queries`, `mutations`, and `from_schema` all accept `mode`.
+If no argument in the schema allows any of these violations, negative mode raises `InvalidArgument`.
 
 ## License
 
-The code in this project is licensed under [MIT license](https://opensource.org/licenses/MIT).
-By contributing to `hypothesis-graphql`, you agree that your contributions will be licensed under its MIT license.
+`hypothesis-graphql` is available under the [MIT license](https://opensource.org/licenses/MIT).
+By contributing, you agree to license your contributions under it.

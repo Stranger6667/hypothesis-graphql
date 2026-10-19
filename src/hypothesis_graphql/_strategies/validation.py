@@ -29,6 +29,7 @@ def validate_custom_scalars(strategies: CustomScalarStrategies) -> None:
 
 
 def validate_scalar_strategy(name: str, strategy: st.SearchStrategy) -> None:
+    """Raise `InvalidArgument` unless `name` is a string and `strategy` is a Hypothesis strategy."""
     if not isinstance(name, str):
         raise InvalidArgument(f"scalar name {name!r} must be a string")
     if not isinstance(strategy, st.SearchStrategy):

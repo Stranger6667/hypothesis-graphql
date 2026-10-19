@@ -2,12 +2,11 @@ import enum
 
 
 class Mode(enum.Enum):
-    """Generation mode for GraphQL queries.
+    """Kind of operations a strategy generates.
 
-    POSITIVE: Generate valid queries that pass schema validation.
-    NEGATIVE: Generate invalid queries with intentional violations
-              (wrong types, missing required args, invalid enums, etc.)
-              for testing error handling.
+    POSITIVE: Operations that pass schema validation.
+    NEGATIVE: Operations with one schema violation, such as a wrong argument type, a missing required
+              argument, or an unknown enum value. Use them to test how your server rejects bad input.
     """
 
     POSITIVE = enum.auto()

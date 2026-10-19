@@ -269,18 +269,20 @@ def queries(
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[str]:
-    r"""A strategy for generating queries for the given GraphQL schema.
+    r"""Generate queries for a GraphQL schema.
 
-    The output query will contain a subset of fields defined in the `Query` type.
+    Each query selects a subset of the fields on the `Query` type.
 
-    :param schema: GraphQL schema as a string or `graphql.GraphQLSchema`.
-    :param fields: Restrict generated fields to ones in this list.
-    :param custom_scalars: Strategies for generating custom scalars.
-    :param print_ast: A function to convert the generated AST to a string.
-    :param allow_x00: Determines whether to allow the generation of `\x00` bytes within strings.
-    :param allow_null: Whether `null` values should be used for optional arguments.
-    :param codec: Specifies the codec used for generating strings.
-    :param mode: Generation mode - POSITIVE for valid queries, NEGATIVE for invalid queries.
+    :param schema: Schema as an SDL string or a `graphql.GraphQLSchema`.
+    :param fields: Root field names to generate. All root fields by default.
+    :param custom_scalars: Strategies that generate value nodes for custom scalars, keyed by scalar name.
+    :param print_ast: Function that turns the generated `graphql.DocumentNode` into a string.
+    :param allow_x00: Allow `\x00` in generated strings.
+    :param allow_null: Allow `null` in argument values, including nested ones.
+    :param codec: Generate only characters this codec can encode. `None` allows any character.
+    :param mode: `Mode.POSITIVE` for valid queries, `Mode.NEGATIVE` for queries with one schema violation.
+    :raises InvalidArgument: If the schema has no `Query` type.
+    :raises ValueError: If `fields` is empty or names a field that `Query` does not define.
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if parsed_schema.query_type is None:
@@ -314,18 +316,20 @@ def mutations(
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[str]:
-    r"""A strategy for generating mutations for the given GraphQL schema.
+    r"""Generate mutations for a GraphQL schema.
 
-    The output mutation will contain a subset of fields defined in the `Mutation` type.
+    Each mutation selects a subset of the fields on the `Mutation` type.
 
-    :param schema: GraphQL schema as a string or `graphql.GraphQLSchema`.
-    :param fields: Restrict generated fields to ones in this list.
-    :param custom_scalars: Strategies for generating custom scalars.
-    :param print_ast: A function to convert the generated AST to a string.
-    :param allow_x00: Determines whether to allow the generation of `\x00` bytes within strings.
-    :param allow_null: Whether `null` values should be used for optional arguments.
-    :param codec: Specifies the codec used for generating strings.
-    :param mode: Generation mode - POSITIVE for valid mutations, NEGATIVE for invalid mutations.
+    :param schema: Schema as an SDL string or a `graphql.GraphQLSchema`.
+    :param fields: Root field names to generate. All root fields by default.
+    :param custom_scalars: Strategies that generate value nodes for custom scalars, keyed by scalar name.
+    :param print_ast: Function that turns the generated `graphql.DocumentNode` into a string.
+    :param allow_x00: Allow `\x00` in generated strings.
+    :param allow_null: Allow `null` in argument values, including nested ones.
+    :param codec: Generate only characters this codec can encode. `None` allows any character.
+    :param mode: `Mode.POSITIVE` for valid mutations, `Mode.NEGATIVE` for mutations with one schema violation.
+    :raises InvalidArgument: If the schema has no `Mutation` type.
+    :raises ValueError: If `fields` is empty or names a field that `Mutation` does not define.
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if parsed_schema.mutation_type is None:
@@ -359,16 +363,20 @@ def from_schema(
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
 ) -> st.SearchStrategy[str]:
-    r"""A strategy for generating queries and mutations for the given GraphQL schema.
+    r"""Generate queries and mutations for a GraphQL schema.
 
-    :param schema: GraphQL schema as a string or `graphql.GraphQLSchema`.
-    :param fields: Restrict generated fields to ones in this list.
-    :param custom_scalars: Strategies for generating custom scalars.
-    :param print_ast: A function to convert the generated AST to a string.
-    :param allow_x00: Determines whether to allow the generation of `\x00` bytes within strings.
-    :param allow_null: Whether `null` values should be used for optional arguments.
-    :param codec: Specifies the codec used for generating strings.
-    :param mode: Generation mode - POSITIVE for valid queries/mutations, NEGATIVE for invalid ones.
+    `fields` may name fields from both the `Query` and `Mutation` types.
+
+    :param schema: Schema as an SDL string or a `graphql.GraphQLSchema`.
+    :param fields: Root field names to generate. All root fields by default.
+    :param custom_scalars: Strategies that generate value nodes for custom scalars, keyed by scalar name.
+    :param print_ast: Function that turns the generated `graphql.DocumentNode` into a string.
+    :param allow_x00: Allow `\x00` in generated strings.
+    :param allow_null: Allow `null` in argument values, including nested ones.
+    :param codec: Generate only characters this codec can encode. `None` allows any character.
+    :param mode: `Mode.POSITIVE` for valid operations, `Mode.NEGATIVE` for operations with one schema violation.
+    :raises InvalidArgument: If the schema has neither a `Query` nor a `Mutation` type.
+    :raises ValueError: If `fields` is empty or names a field that neither root type defines.
     """
     parsed_schema = validation.maybe_parse_schema(schema)
     if custom_scalars:

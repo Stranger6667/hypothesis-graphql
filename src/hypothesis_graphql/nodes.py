@@ -1,3 +1,5 @@
+"""Build GraphQL value nodes for `custom_scalars` strategies, e.g. `st.dates().map(nodes.String)`."""
+
 from __future__ import annotations
 
 import typing
