@@ -2,6 +2,8 @@
 
 ## [Unreleased] - TBD
 
+## [0.13.3] - 2026-10-19
+
 ### Added
 
 - Support for Python 3.15.
@@ -250,7 +252,8 @@ Invalid queries:
 
 - Initial public release
 
-[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.2...HEAD
+[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.3...HEAD
+[0.13.3]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.12.0...v0.13.0
