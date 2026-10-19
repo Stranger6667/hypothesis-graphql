@@ -29,7 +29,7 @@ readme = "README.md"
 license = "MIT"
 include = ["src/hypothesis_graphql/py.typed"]
 requires-python = ">=3.10"
-dependencies = ["hypothesis>=6.84.3,<7.0", "graphql-core>=3.1.0,<3.3.0"]
+dependencies = ["hypothesis>=6.84.3,<7.0", "graphql-core>=3.1.0,<3.4.0"]
 
 [project.optional-dependencies]
 tests = ["coverage>=7", "pytest>=6.2.0,<8", "pytest-xdist>=3"]

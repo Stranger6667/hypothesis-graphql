@@ -2,6 +2,7 @@ import graphql
 from hypothesis import HealthCheck, Phase, given, settings
 from hypothesis import strategies as st
 
+from hypothesis_graphql._strategies.ast import make_query
 from hypothesis_graphql._strategies.builder import build_selection_set
 from hypothesis_graphql._strategies.sampler import positive_selection
 from hypothesis_graphql._strategies.strategy import _build_alphabet
@@ -12,11 +13,7 @@ SCHEMA = graphql.build_schema(
 
 
 def _doc(nodes, schema):
-    sel = build_selection_set(nodes, type_map=schema.type_map)
-    op = graphql.OperationDefinitionNode(
-        operation=graphql.OperationType.QUERY, selection_set=sel, variable_definitions=()
-    )
-    return graphql.DocumentNode(definitions=(op,))
+    return make_query(build_selection_set(nodes, type_map=schema.type_map).selections)
 
 
 @given(data=st.data())
