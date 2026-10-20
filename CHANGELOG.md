@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Fixed
+
+- Use default values that are input objects for arguments and input fields.
+
 ## [0.13.3] - 2026-10-19
 
 ### Added
