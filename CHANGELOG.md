@@ -4,7 +4,7 @@
 
 ### Fixed
 
-- Use default values that are input objects for arguments and input fields.
+- Use default values that are input objects for arguments and input fields. [#248](https://github.com/Stranger6667/hypothesis-graphql/issues/248)
 
 ## [0.13.3] - 2026-10-19
 
