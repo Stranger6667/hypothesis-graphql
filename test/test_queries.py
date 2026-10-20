@@ -467,6 +467,35 @@ type Query {{
     assert all_valid
 
 
+def test_input_object_default_values(validate_operation):
+    # When an argument or an input field has a default value that is an input object
+    # Then that default value should be used in generated queries
+    schema = """
+    input Nested {
+      value: String
+    }
+    input Filter {
+      term: String
+      nested: Nested = { value: "field-level" }
+    }
+    type Query {
+      search(filter: Filter = { term: "arg-level", nested: { value: "arg-level" } }): Int
+    }
+    """
+
+    def normalize(query):
+        # `graphql-core` 3.3 pads object literals with spaces
+        return query.replace(" ", "").replace("\n", "")
+
+    strategy = queries(schema)
+    # The default value of the `filter` argument
+    query = find(strategy, lambda q: '{term:"arg-level",nested:{value:"arg-level"}}' in normalize(q))
+    validate_operation(schema, query)
+    # The default value of the `nested` input field
+    query = find(strategy, lambda q: 'nested:{value:"field-level"}' in normalize(q))
+    validate_operation(schema, query)
+
+
 @given(data=st.data())
 def test_empty_interface(data, validate_operation):
     # When the schema contains an empty interface (which is invalid)
