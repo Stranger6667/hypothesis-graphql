@@ -80,7 +80,7 @@ class GraphQLStrategy:
         if isinstance(type_, graphql.GraphQLList):
             return self.lists(type_, nullable, default=default)
         if isinstance(type_, graphql.GraphQLInputObjectType):
-            return self.objects(type_, nullable)
+            return self.objects(type_, nullable, default=default)
         raise TypeError(f"Type {type_.__class__.__name__} is not supported.")
 
     @instance_cache(
@@ -100,9 +100,12 @@ class GraphQLStrategy:
         strategy = st.lists(self.values(type_.of_type))
         return primitives.list_(strategy, nullable, default=default)
 
-    @instance_cache(lambda type_, nullable=True: (type_.name, nullable))
+    @instance_cache(lambda type_, nullable=True, default=None: (type_.name, nullable, default))
     def objects(
-        self, type_: graphql.GraphQLInputObjectType, nullable: bool = True
+        self,
+        type_: graphql.GraphQLInputObjectType,
+        nullable: bool = True,
+        default: graphql.ValueNode | None = None,
     ) -> st.SearchStrategy[graphql.ObjectValueNode]:
         """Generate a `graphql.ObjectValueNode`."""
         # Generate optional fields that are possible to generate and all required fields.
@@ -114,7 +117,7 @@ class GraphQLStrategy:
         }
 
         strategy = subset_of_fields(fields, force_required=True).flatmap(self.lists_of_object_fields)
-        return primitives.maybe_null(strategy.map(nodes.Object), nullable)
+        return primitives.maybe_default(primitives.maybe_null(strategy.map(nodes.Object), nullable), default=default)
 
     def can_generate_field(self, field: graphql.GraphQLInputField) -> bool:
         """Whether it is possible to generate values for the given field."""
