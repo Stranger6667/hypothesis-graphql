@@ -2,6 +2,8 @@
 
 ## [Unreleased] - TBD
 
+## [0.13.5] - 2026-10-22
+
 ### Added
 
 - `__all__` in `hypothesis_graphql` and `hypothesis_graphql.strategies`.
@@ -268,7 +270,8 @@ Invalid queries:
 
 - Initial public release
 
-[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.4...HEAD
+[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.5...HEAD
+[0.13.5]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.1...v0.13.2
