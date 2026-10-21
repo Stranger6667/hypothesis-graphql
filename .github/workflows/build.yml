@@ -43,6 +43,8 @@ jobs:
         with:
           python-version: "3.14"
 
+      - uses: astral-sh/setup-uv@v7
+
       - uses: j178/prek-action@v3.0.1
         with:
           extra-args: --all-files mypy

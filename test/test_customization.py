@@ -1,4 +1,5 @@
 import re
+from types import MappingProxyType
 
 import pytest
 from hypothesis import find, given
@@ -136,14 +137,15 @@ def test_custom_scalar_field(data, validate_operation):
     )
 
 
+@pytest.mark.parametrize("mapping", [dict, MappingProxyType], ids=["dict", "mapping"])
 @given(data=st.data())
-def test_custom_scalar_registered(data, validate_operation):
+def test_custom_scalar_registered(data, validate_operation, mapping):
     # When the user registered a custom strategy for a scalar
     # Then it should generate valid queries
     schema = CUSTOM_SCALAR_TEMPLATE.format(query="getByDate(created: Date!): Int")
     expected = "EXAMPLE"
 
-    query = data.draw(queries(schema, custom_scalars={"Date": st.just(expected).map(nodes.String)}))
+    query = data.draw(queries(schema, custom_scalars=mapping({"Date": st.just(expected).map(nodes.String)})))
     validate_operation(schema, query)
     assert f'getByDate(created: "{expected}")' in query
 

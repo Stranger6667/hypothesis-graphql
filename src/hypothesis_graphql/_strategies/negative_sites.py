@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Sequence
+from typing import cast
 
 import graphql
 from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
 
 from .. import nodes
+from ..types import CustomScalarStrategies
 from . import primitives
 from .builder import SelectionNode
 from .oracle import is_leaf, selectable_fields, unwrap
@@ -63,7 +65,7 @@ def enumerate_violation_sites(schema: graphql.GraphQLSchema, root: graphql.Graph
     # One representative path per type. Enumerating every route explodes combinatorially on
     # dense recursive schemas; we only need a reachable path to each violatable field.
     sites: list[ViolationSite] = []
-    walked: set = set()
+    walked: set[str] = set()
 
     def walk(type_: graphql.GraphQLNamedType, path: tuple[PathStep, ...]) -> None:
         if type_.name in walked or len(path) > MAX_DEPTH:
@@ -121,9 +123,9 @@ def _violation_value(
     if kind == "out_of_range":
         return draw(primitives.out_of_range_int())
     if kind == "invalid_enum":
-        return draw(primitives.invalid_enum(tuple(inner.values)))
+        return draw(primitives.invalid_enum(tuple(cast(graphql.GraphQLEnumType, inner).values)))
     # Only "missing_input_field" remains.
-    return _input_missing_required(draw, gql, inner)
+    return _input_missing_required(draw, gql, cast(graphql.GraphQLInputObjectType, inner))
 
 
 def _corrupt_args(
@@ -144,7 +146,7 @@ def _extend_to_leaf(
     schema: graphql.GraphQLSchema,
     gql: GraphQLStrategy,
     type_: graphql.GraphQLNamedType,
-    seen: frozenset,
+    seen: frozenset[str],
 ) -> list[SelectionNode] | None:
     if type_.name in seen:
         return None
@@ -163,7 +165,7 @@ def negative_selection(
     schema: graphql.GraphQLSchema,
     root: graphql.GraphQLObjectType,
     alphabet: st.SearchStrategy[str],
-    custom_scalars: dict | None = None,
+    custom_scalars: CustomScalarStrategies | None = None,
     allow_null: bool = True,
     fields: Sequence[str] | None = None,
 ) -> st.SearchStrategy[list[SelectionNode]]:
@@ -174,7 +176,7 @@ def negative_selection(
         sites = [site for site in sites if site.path[0].field_name in allowed]
     gql = GraphQLStrategy(schema=schema, alphabet=alphabet, custom_scalars=custom_scalars or {}, allow_null=allow_null)
 
-    @st.composite  # type: ignore
+    @st.composite
     def _generate(draw: st.DrawFn) -> list[SelectionNode]:
         if not sites:
             raise InvalidArgument(
@@ -185,7 +187,7 @@ def negative_selection(
         kind = draw(st.sampled_from(site.kinds))
 
         resolved = []
-        cur = root
+        cur: graphql.GraphQLNamedType = root
         for step in site.path:
             field = _find_field(schema, cur, step.field_name, step.on_type)
             resolved.append((step.field_name, step.on_type, field))

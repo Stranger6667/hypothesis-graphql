@@ -23,12 +23,12 @@ classifiers = [
   "Programming Language :: Python :: 3.15",
   "Programming Language :: Python :: Implementation :: CPython",
   "Topic :: Software Development :: Testing",
+  "Typing :: Typed",
 ]
 authors = [{ name = "Dmitry Dygalo", email = "dmitry@dygalo.dev" }]
 maintainers = [{ name = "Dmitry Dygalo", email = "dmitry@dygalo.dev" }]
 readme = "README.md"
 license = "MIT"
-include = ["src/hypothesis_graphql/py.typed"]
 requires-python = ">=3.10"
 dependencies = ["hypothesis>=6.84.3,<7.0", "graphql-core>=3.1.0,<3.4.0"]
 
@@ -89,11 +89,6 @@ ignore = [
   "D213", # Multiline summary second line
   "D401", # Imperative mood
 ]
-
-# Ignore `F401` (unused import) in all `__init__.py` files.
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]
-"strategies.py" = ["F401"]
 
 [tool.ruff.format]
 skip-magic-trailing-comma = false

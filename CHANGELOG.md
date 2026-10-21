@@ -2,6 +2,16 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- `__all__` in `hypothesis_graphql` and `hypothesis_graphql.strategies`.
+- `Typing :: Typed` classifier.
+
+### Changed
+
+- `queries`, `mutations` and `from_schema` return `SearchStrategy[T]` for a custom `print_ast` returning `T`.
+- `custom_scalars` accepts any `Mapping`.
+
 ## [0.13.4] - 2026-10-20
 
 ### Fixed
