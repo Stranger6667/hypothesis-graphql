@@ -10,7 +10,6 @@ from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
 
 from .. import nodes
-from ..types import ScalarValueNode
 
 T = TypeVar("T")
 MIN_INT = -(2**31)
@@ -52,7 +51,7 @@ def scalar(
     type_name: str,
     nullable: bool = True,
     default: graphql.ValueNode | None = None,
-) -> st.SearchStrategy[ScalarValueNode]:
+) -> st.SearchStrategy[graphql.ValueNode]:
     if type_name == "Int":
         return int_(nullable=nullable, default=default)
     if type_name == "Float":
@@ -69,19 +68,17 @@ def scalar(
     )
 
 
-def int_(*, nullable: bool = True, default: graphql.ValueNode | None = None) -> st.SearchStrategy[graphql.IntValueNode]:
+def int_(*, nullable: bool = True, default: graphql.ValueNode | None = None) -> st.SearchStrategy[graphql.ValueNode]:
     return maybe_default(maybe_null(INTEGER_STRATEGY, nullable), default=default)
 
 
-def float_(
-    *, nullable: bool = True, default: graphql.ValueNode | None = None
-) -> st.SearchStrategy[graphql.FloatValueNode]:
+def float_(*, nullable: bool = True, default: graphql.ValueNode | None = None) -> st.SearchStrategy[graphql.ValueNode]:
     return maybe_default(maybe_null(FLOAT_STRATEGY, nullable), default=default)
 
 
 def string(
     *, nullable: bool = True, default: graphql.ValueNode | None = None, alphabet: st.SearchStrategy[str]
-) -> st.SearchStrategy[graphql.StringValueNode]:
+) -> st.SearchStrategy[graphql.ValueNode]:
     return maybe_default(
         maybe_null(st.text(alphabet=alphabet).map(_string), nullable),
         default=default,
@@ -90,50 +87,50 @@ def string(
 
 def id_(
     *, nullable: bool = True, default: graphql.ValueNode | None = None, alphabet: st.SearchStrategy[str]
-) -> st.SearchStrategy[graphql.StringValueNode | graphql.IntValueNode]:
+) -> st.SearchStrategy[graphql.ValueNode]:
     return maybe_default(string(nullable=nullable, alphabet=alphabet) | int_(nullable=nullable), default=default)
 
 
-def boolean(
-    *, nullable: bool = True, default: graphql.ValueNode | None = None
-) -> st.SearchStrategy[graphql.BooleanValueNode]:
+def boolean(*, nullable: bool = True, default: graphql.ValueNode | None = None) -> st.SearchStrategy[graphql.ValueNode]:
     return maybe_default(maybe_null(BOOLEAN_STRATEGY, nullable), default=default)
 
 
-def maybe_null(strategy: st.SearchStrategy[T], nullable: bool) -> st.SearchStrategy[T]:
+def maybe_null(strategy: st.SearchStrategy[T], nullable: bool) -> st.SearchStrategy[T | graphql.NullValueNode]:
     if nullable:
-        strategy |= NULL_STRATEGY
+        return strategy | NULL_STRATEGY
     return strategy
 
 
 def custom(
-    strategy: st.SearchStrategy,
+    strategy: st.SearchStrategy[graphql.ValueNode],
     nullable: bool = True,
     default: graphql.ValueNode | None = None,
-) -> st.SearchStrategy:
+) -> st.SearchStrategy[graphql.ValueNode]:
     return maybe_default(maybe_null(strategy, nullable), default=default)
 
 
-def maybe_default(strategy: st.SearchStrategy[T], *, default: graphql.ValueNode | None = None) -> st.SearchStrategy[T]:
+def maybe_default(
+    strategy: st.SearchStrategy[T], *, default: graphql.ValueNode | None = None
+) -> st.SearchStrategy[T | graphql.ValueNode]:
     if default is not None:
-        strategy |= st.just(default)
+        return strategy | st.just(default)
     return strategy
 
 
 @lru_cache(maxsize=64)
 def enum(
-    values: tuple[str],
+    values: tuple[str, ...],
     nullable: bool = True,
     default: graphql.ValueNode | None = None,
-) -> st.SearchStrategy[graphql.EnumValueNode]:
+) -> st.SearchStrategy[graphql.ValueNode]:
     return maybe_default(maybe_null(st.sampled_from(values).map(nodes.Enum), nullable), default=default)
 
 
 def list_(
-    strategy: st.SearchStrategy[graphql.ListValueNode],
+    strategy: st.SearchStrategy[list[graphql.ValueNode]],
     nullable: bool = True,
     default: graphql.ValueNode | None = None,
-) -> st.SearchStrategy[graphql.ListValueNode]:
+) -> st.SearchStrategy[graphql.ValueNode]:
     return maybe_default(maybe_null(strategy.map(nodes.List), nullable), default=default)
 
 

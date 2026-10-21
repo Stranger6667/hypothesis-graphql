@@ -24,12 +24,15 @@ repos:
     hooks:
       - id: yamllint
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.4.0
+  - repo: local
     hooks:
       - id: mypy
-        exclude: ^(docs/|test/|benchmarks/).*$
-        args: ["--ignore-missing-imports"]
+        name: mypy
+        entry: uvx --python 3.10 --with-editable=. mypy==2.4.0
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+        exclude: ^(docs/|benchmarks/|test/(?!typing_checks\.py$)).*$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.1

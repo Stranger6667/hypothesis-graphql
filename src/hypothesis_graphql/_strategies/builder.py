@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import cast
 
 import graphql
 from graphql import is_equal_type
@@ -41,7 +42,7 @@ def build_selection_set(
             by_type.setdefault(node[1], []).append(node)
     for on_type in sorted(by_type):
         assert type_map is not None
-        fragment_type = type_map[on_type]
+        fragment_type = cast("graphql.GraphQLObjectType | graphql.GraphQLInterfaceType", type_map[on_type])
         frag_fields: list[graphql.SelectionNode] = []
         for name, _on_type, children, args in by_type[on_type]:
             field_type = fragment_type.fields[name].type

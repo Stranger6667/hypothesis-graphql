@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import graphql
 from hypothesis import strategies as st
 from hypothesis.errors import InvalidArgument
@@ -23,12 +25,12 @@ def validate_fields(fields_: tuple[str, ...], available_fields: list[str]) -> No
 
 
 def validate_custom_scalars(strategies: CustomScalarStrategies) -> None:
-    assert isinstance(strategies, dict)
+    assert isinstance(strategies, Mapping)
     for name, strategy in strategies.items():
         validate_scalar_strategy(name, strategy)
 
 
-def validate_scalar_strategy(name: str, strategy: st.SearchStrategy) -> None:
+def validate_scalar_strategy(name: str, strategy: st.SearchStrategy[graphql.ValueNode]) -> None:
     """Raise `InvalidArgument` unless `name` is a string and `strategy` is a Hypothesis strategy."""
     if not isinstance(name, str):
         raise InvalidArgument(f"scalar name {name!r} must be a string")

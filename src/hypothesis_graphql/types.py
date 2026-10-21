@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 
 import graphql
 from hypothesis import strategies as st
@@ -8,6 +8,6 @@ ScalarValueNode = graphql.IntValueNode | graphql.FloatValueNode | graphql.String
 InputTypeNode = ScalarValueNode | graphql.EnumValueNode | graphql.ListValueNode | graphql.ObjectValueNode
 Field = graphql.GraphQLField | graphql.GraphQLInputField
 InterfaceOrObject = graphql.GraphQLObjectType | graphql.GraphQLInterfaceType
-SelectionNodes = list[graphql.SelectionNode]
-AstPrinter = Callable[[graphql.Node], str]
-CustomScalarStrategies = dict[str, st.SearchStrategy[graphql.ValueNode]]
+SelectionNodes = Sequence[graphql.SelectionNode]
+AstPrinter = Callable[[graphql.DocumentNode], str]
+CustomScalarStrategies = Mapping[str, st.SearchStrategy[graphql.ValueNode]]

@@ -40,7 +40,7 @@ def positive_selection(
             items = [item for item in items if item[0] in allowed_root]
         return items
 
-    @st.composite  # type: ignore
+    @st.composite
     def _generate(draw: st.DrawFn) -> list[SelectionNode]:
         counter = [0]
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import math
 from functools import lru_cache
+from typing import cast
 
 import graphql
 
@@ -12,7 +13,7 @@ Selectable = tuple[str, graphql.GraphQLField, str | None]
 def unwrap(type_: graphql.GraphQLType) -> graphql.GraphQLNamedType:
     while isinstance(type_, graphql.GraphQLWrappingType):
         type_ = type_.of_type
-    return type_
+    return cast(graphql.GraphQLNamedType, type_)
 
 
 def is_leaf(type_: graphql.GraphQLNamedType) -> bool:
@@ -42,16 +43,16 @@ MAX_ITERS = 1000
 OVERFLOW = 1e9
 
 
-def _reachable_composites(schema: graphql.GraphQLSchema, roots: frozenset) -> set:
+def _reachable_composites(schema: graphql.GraphQLSchema, roots: frozenset[str]) -> set[str]:
     # Roots and every appended target are composite (only non-leaf field types are pushed).
-    seen: set = set()
+    seen: set[str] = set()
     stack = list(roots)
     while stack:
         name = stack.pop()
         if name in seen:
             continue
         seen.add(name)
-        for _name, field, _on_type in selectable_fields(schema, schema.get_type(name)):
+        for _name, field, _on_type in selectable_fields(schema, schema.type_map[name]):
             target = unwrap(field.type)
             if not is_leaf(target):
                 stack.append(target.name)
@@ -62,18 +63,18 @@ def _reachable_composites(schema: graphql.GraphQLSchema, roots: frozenset) -> se
 FieldTerms = dict[str, list[tuple[bool, str]]]
 
 
-def _field_terms(schema: graphql.GraphQLSchema, types: set) -> FieldTerms:
+def _field_terms(schema: graphql.GraphQLSchema, types: set[str]) -> FieldTerms:
     terms: FieldTerms = {}
     for name in types:
         row: list[tuple[bool, str]] = []
-        for _name, field, _on_type in selectable_fields(schema, schema.get_type(name)):
+        for _name, field, _on_type in selectable_fields(schema, schema.type_map[name]):
             target = unwrap(field.type)
             row.append((True, "") if is_leaf(target) else (False, target.name))
         terms[name] = row
     return terms
 
 
-def _solve(types: set, terms: FieldTerms, x: float) -> dict[str, float]:
+def _solve(types: set[str], terms: FieldTerms, x: float) -> dict[str, float]:
     # Fixpoint of y_T = product over selectable fields of (1 + phi); non-convergence within
     # MAX_ITERS is treated as past the singularity (OverflowError), so callers back x off.
     y = dict.fromkeys(types, 0.0)
@@ -93,7 +94,7 @@ def _solve(types: set, terms: FieldTerms, x: float) -> dict[str, float]:
     raise OverflowError("no convergence")
 
 
-def selset_values(schema: graphql.GraphQLSchema, roots: frozenset, x: float) -> dict[str, float]:
+def selset_values(schema: graphql.GraphQLSchema, roots: frozenset[str], x: float) -> dict[str, float]:
     types = _reachable_composites(schema, roots)
     return _solve(types, _field_terms(schema, types), x)
 
@@ -113,7 +114,7 @@ def min_depths(schema: graphql.GraphQLSchema) -> dict[str, int | None]:
         changed = False
         for name in composites:
             best = depth[name]
-            for _name, field, _on_type in selectable_fields(schema, schema.get_type(name)):
+            for _name, field, _on_type in selectable_fields(schema, schema.type_map[name]):
                 target = unwrap(field.type)
                 if is_leaf(target):
                     candidate: int | None = 1
@@ -136,20 +137,20 @@ class Oracle:
 
     def inclusion_probabilities(self, type_name: str) -> dict[tuple[str, str | None], float]:
         out: dict[tuple[str, str | None], float] = {}
-        for name, field, on_type in selectable_fields(self.schema, self.schema.get_type(type_name)):
+        for name, field, on_type in selectable_fields(self.schema, self.schema.type_map[type_name]):
             target = unwrap(field.type)
             phi = self.x if is_leaf(target) else self.x * (self.y.get(target.name, 0.0) - 1.0)
             out[(name, on_type)] = phi / (1.0 + phi)
         return out
 
 
-def build_oracle(schema: graphql.GraphQLSchema, roots: frozenset, target_size: float = 8.0) -> Oracle:
+def build_oracle(schema: graphql.GraphQLSchema, roots: frozenset[str], target_size: float = 8.0) -> Oracle:
     # `roots` may arrive as a plain `set`; normalize before it hits the cache key below.
     return _build_oracle_cached(schema, frozenset(roots), target_size)
 
 
 @lru_cache(maxsize=32)
-def _build_oracle_cached(schema: graphql.GraphQLSchema, roots: frozenset, target_size: float) -> Oracle:
+def _build_oracle_cached(schema: graphql.GraphQLSchema, roots: frozenset[str], target_size: float) -> Oracle:
     # Precompute field terms once; the binary search below reuses them across all solves.
     types = _reachable_composites(schema, roots)
     terms = _field_terms(schema, types)
