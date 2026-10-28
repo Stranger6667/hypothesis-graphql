@@ -2,6 +2,8 @@
 
 ## [Unreleased] - TBD
 
+## [0.13.6] - 2026-10-28
+
 ### Added
 
 - Support for `@oneOf` input objects.
@@ -274,7 +276,8 @@ Invalid queries:
 
 - Initial public release
 
-[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.5...HEAD
+[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.6...HEAD
+[0.13.6]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.5...v0.13.6
 [0.13.5]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.2...v0.13.3
