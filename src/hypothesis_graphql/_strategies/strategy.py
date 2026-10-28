@@ -112,6 +112,14 @@ class GraphQLStrategy:
         default: graphql.ValueNode | None = None,
     ) -> st.SearchStrategy[graphql.ValueNode]:
         """Generate a `graphql.ObjectValueNode`."""
+        # graphql-core 3.2.7+ marks `@oneOf` inputs, which take exactly one field with a non-null value
+        if getattr(type_, "is_one_of", False):
+            one_of_fields = [(name, field) for name, field in type_.fields.items() if self.can_generate_field(field)]
+            if not one_of_fields:
+                # An empty object is invalid here; building a field raises the same error an unknown scalar gives
+                self.one_of_field(next(iter(type_.fields.items())))
+            one_of = st.sampled_from(one_of_fields).flatmap(self.one_of_field)
+            return primitives.maybe_default(primitives.maybe_null(one_of.map(nodes.Object), nullable), default=default)
         # Generate optional fields that are possible to generate and all required fields.
         # If a required field is not possible to generate, then it will fail deeper anyway
         fields = {
@@ -122,6 +130,14 @@ class GraphQLStrategy:
 
         strategy = subset_of_fields(fields, force_required=True).flatmap(self.lists_of_object_fields)
         return primitives.maybe_default(primitives.maybe_null(strategy.map(nodes.Object), nullable), default=default)
+
+    def one_of_field(
+        self, item: tuple[str, graphql.GraphQLInputField]
+    ) -> st.SearchStrategy[list[graphql.ObjectFieldNode]]:
+        name, field = item
+        # Schema validation rejects non-null `@oneOf` fields, and an explicit `null` is not allowed either
+        type_ = graphql.GraphQLNonNull(cast("graphql.GraphQLNullableInputType", field.type))
+        return self.values(type_).map(factories.object_field(name)).map(lambda node: [node])
 
     def can_generate_field(self, field: graphql.GraphQLInputField) -> bool:
         """Whether it is possible to generate values for the given field."""

@@ -1,3 +1,5 @@
+import inspect
+
 import graphql
 import pytest
 from graphql import GraphQLNamedType
@@ -529,3 +531,44 @@ type Query {
     validate_operation(schema, query)
     assert "\0" not in query
     query.encode("ascii")
+
+
+ONE_OF_SCHEMA = """
+input Pick @oneOf { id: ID, name: String, tags: [String!], nested: Pick }
+type Query { find(pick: Pick!, maybe: Pick): Int }
+"""
+# graphql-core added `@oneOf` input objects in 3.2.7
+ONE_OF_SUPPORTED = "is_one_of" in inspect.signature(graphql.GraphQLInputObjectType).parameters
+
+
+@pytest.mark.skipif(not ONE_OF_SUPPORTED, reason="graphql-core has no `@oneOf` support")
+@pytest.mark.parametrize("allow_null", (True, False))
+@given(data=st.data())
+def test_one_of_input_objects(data, allow_null, validate_operation):
+    query = data.draw(queries(ONE_OF_SCHEMA, allow_null=allow_null))
+    validate_operation(ONE_OF_SCHEMA, query)
+
+
+@pytest.mark.skipif(not ONE_OF_SUPPORTED, reason="graphql-core has no `@oneOf` support")
+@pytest.mark.parametrize("field", ("id", "name", "tags", "nested"))
+def test_one_of_input_objects_reach_every_field(field):
+    find(queries(ONE_OF_SCHEMA), lambda query: f"pick: {{{field}:" in query.replace("{ ", "{"))
+
+
+@pytest.mark.skipif(not ONE_OF_SUPPORTED, reason="graphql-core has no `@oneOf` support")
+@given(data=st.data())
+def test_one_of_input_object_with_no_generatable_fields(data, validate_operation):
+    schema = """
+scalar Custom
+input Pick @oneOf { a: Custom }
+type Query { search(pick: Pick, n: Int!): Int }
+"""
+    query = data.draw(queries(schema))
+    validate_operation(schema, query)
+
+
+@pytest.mark.skipif(not ONE_OF_SUPPORTED, reason="graphql-core has no `@oneOf` support")
+def test_one_of_required_input_object_with_no_generatable_fields():
+    schema = "scalar Custom input Pick @oneOf { a: Custom } type Query { search(pick: Pick!): Int }"
+    with pytest.raises(InvalidArgument, match="Custom"):
+        find(queries(schema), lambda query: True)
