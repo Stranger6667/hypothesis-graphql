@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- Support for `@oneOf` input objects.
+
 ## [0.13.5] - 2026-10-22
 
 ### Added
