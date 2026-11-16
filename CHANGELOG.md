@@ -2,10 +2,16 @@
 
 ## [Unreleased] - TBD
 
+### Fixed
+
+- `ValueError` on types with many fields that return the type itself.
+- Field selection probabilities too low on schemas with long chains of recursive types.
+
 ### Performance
 
 - Up to ~2.8x faster generation by reusing strategies for field selection and arguments across examples.
 - Up to 1.3x faster `NEGATIVE` mode generation on schemas with input objects.
+- Up to 30x faster first strategy build on large schemas.
 
 ## [0.13.6] - 2026-10-28
 

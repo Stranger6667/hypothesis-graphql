@@ -39,64 +39,90 @@ def selectable_fields(schema: graphql.GraphQLSchema, type_: graphql.GraphQLNamed
     return out
 
 
-MAX_ITERS = 1000
 OVERFLOW = 1e9
+TOLERANCE = 1e-10
+SETTLED = 1e-12
+DIVERGING = 1.01
+MAX_RATE = 0.999
+
+# For each reachable composite type: name, number of leaf fields, indices of composite field targets
+Equations = tuple[list[str], list[int], list[list[int]]]
 
 
-def _reachable_composites(schema: graphql.GraphQLSchema, roots: frozenset[str]) -> set[str]:
-    # Roots and every appended target are composite (only non-leaf field types are pushed).
-    seen: set[str] = set()
-    stack = list(roots)
+def _equations(schema: graphql.GraphQLSchema, roots: frozenset[str]) -> Equations:
+    # Post-order: targets precede the types selecting them, so one in-place sweep carries values up acyclic paths.
+    rows: dict[str, tuple[int, list[str]]] = {}
+    names: list[str] = []
+    stack = [(name, False) for name in roots]
     while stack:
-        name = stack.pop()
-        if name in seen:
-            continue
-        seen.add(name)
-        for _name, field, _on_type in selectable_fields(schema, schema.type_map[name]):
-            target = unwrap(field.type)
-            if not is_leaf(target):
-                stack.append(target.name)
-    return seen
+        name, expanded = stack.pop()
+        if expanded:
+            names.append(name)
+        elif name not in rows:
+            leaves, children = 0, []
+            for _name, field, _on_type in selectable_fields(schema, schema.type_map[name]):
+                target = unwrap(field.type)
+                if is_leaf(target):
+                    leaves += 1
+                else:
+                    children.append(target.name)
+            rows[name] = (leaves, children)
+            stack.append((name, True))
+            stack.extend((child, False) for child in children)
+    index = {name: idx for idx, name in enumerate(names)}
+    return names, [rows[name][0] for name in names], [[index[child] for child in rows[name][1]] for name in names]
 
 
-# type name -> list of (is_leaf, target type name) for each selectable field
-FieldTerms = dict[str, list[tuple[bool, str]]]
-
-
-def _field_terms(schema: graphql.GraphQLSchema, types: set[str]) -> FieldTerms:
-    terms: FieldTerms = {}
-    for name in types:
-        row: list[tuple[bool, str]] = []
-        for _name, field, _on_type in selectable_fields(schema, schema.type_map[name]):
-            target = unwrap(field.type)
-            row.append((True, "") if is_leaf(target) else (False, target.name))
-        terms[name] = row
-    return terms
-
-
-def _solve(types: set[str], terms: FieldTerms, x: float) -> dict[str, float]:
-    # Fixpoint of y_T = product over selectable fields of (1 + phi); non-convergence within
-    # MAX_ITERS is treated as past the singularity (OverflowError), so callers back x off.
-    y = dict.fromkeys(types, 0.0)
-    for _ in range(MAX_ITERS):
-        updated = {}
-        for name in types:
-            product = 1.0
-            for is_leaf_field, target_name in terms[name]:
-                phi = x if is_leaf_field else x * (y[target_name] - 1.0)
-                product *= 1.0 + phi
-                if product > OVERFLOW:
-                    raise OverflowError(name)
-            updated[name] = product
-        if all(abs(updated[name] - y[name]) < 1e-12 for name in types):
-            return updated
-        y = updated
-    raise OverflowError("no convergence")
+def _solve(equations: Equations, x: float, start: list[float] | None = None) -> list[float]:
+    # Least fixpoint >= 1 of y_T = product over selectable fields of (1 + phi). The right-hand side is monotone
+    # and convex in y, so in-place sweeps from all-ones (or from a solution for a smaller x) only increase:
+    # they either converge or grow without bound, which means x is past the singularity.
+    _, leaves, targets = equations
+    y = [1.0] * len(leaves) if start is None else start.copy()
+    leaf_products = [(1.0 + x) ** count for count in leaves]
+    deltas = [0.0] * len(leaves)
+    comparable = False
+    while True:
+        change = 0.0
+        # Smallest ratio between a type's move in this sweep and in the previous one
+        rate = math.inf
+        for idx, product in enumerate(leaf_products):
+            for target in targets[idx]:
+                product *= 1.0 + x * (y[target] - 1.0)
+            if product > OVERFLOW:
+                raise OverflowError
+            delta = product - y[idx]
+            previous = deltas[idx]
+            relative = abs(delta) / product
+            if relative > change:
+                change = relative
+            # Moves at rounding-noise level say nothing about the rate
+            if previous > SETTLED * product:
+                if delta < rate * previous:
+                    rate = delta / previous
+            elif delta < 0.0 and relative > SETTLED:
+                rate = 0.0
+            deltas[idx] = delta
+            y[idx] = product
+        if change < TOLERANCE:
+            return y
+        if comparable and 0.0 < rate < math.inf:
+            # By convexity every later sweep moves each type by at least `rate` times its previous move
+            if rate > DIVERGING:
+                raise OverflowError
+            # The geometric series of the remaining moves stays at or below the fixpoint; adding it skips most
+            # sweeps when convergence is slow. The cap keeps rounding errors in `rate` from overshooting.
+            rate = min(rate, MAX_RATE)
+            rest = rate / (1.0 - rate)
+            y = [value + delta * rest for value, delta in zip(y, deltas, strict=True)]
+            comparable = False
+        else:
+            comparable = rate > 0.0
 
 
 def selset_values(schema: graphql.GraphQLSchema, roots: frozenset[str], x: float) -> dict[str, float]:
-    types = _reachable_composites(schema, roots)
-    return _solve(types, _field_terms(schema, types), x)
+    equations = _equations(schema, frozenset(roots))
+    return dict(zip(equations[0], _solve(equations, x), strict=True))
 
 
 @lru_cache(maxsize=32)
@@ -151,27 +177,22 @@ def build_oracle(schema: graphql.GraphQLSchema, roots: frozenset[str], target_si
 
 @lru_cache(maxsize=32)
 def _build_oracle_cached(schema: graphql.GraphQLSchema, roots: frozenset[str], target_size: float) -> Oracle:
-    # Precompute field terms once; the binary search below reuses them across all solves.
-    types = _reachable_composites(schema, roots)
-    terms = _field_terms(schema, types)
-    root = next(iter(roots))
-
-    def size_at(x: float) -> float:
-        h = x * 1e-4
-        hi = _solve(types, terms, x + h)
-        lo = _solve(types, terms, x - h)
-        return x * (math.log(hi[root]) - math.log(lo[root])) / (2 * h)
-
+    equations = _equations(schema, roots)
+    root = equations[0].index(next(iter(roots)))
     lo, hi, best_x = 1e-6, 1.0, 1e-6
+    # Solution slightly below `best_x`: a valid `start` for every later probe
+    below: list[float] | None = None
     for _ in range(20):
         mid = (lo + hi) / 2
+        h = mid * 1e-4
         try:
-            size = size_at(mid)
+            y_lo = _solve(equations, mid - h, below)
+            y_hi = _solve(equations, mid + h, y_lo)
         except OverflowError:
             hi = mid
             continue
-        if size < target_size:
-            best_x, lo = mid, mid
+        if mid * (math.log(y_hi[root]) - math.log(y_lo[root])) / (2 * h) < target_size:
+            best_x, lo, below = mid, mid, y_lo
         else:
             hi = mid
-    return Oracle(schema=schema, x=best_x, y=_solve(types, terms, best_x))
+    return Oracle(schema=schema, x=best_x, y=dict(zip(equations[0], _solve(equations, best_x, below), strict=True)))

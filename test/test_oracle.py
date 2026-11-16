@@ -1,3 +1,5 @@
+import math
+
 import graphql
 
 from hypothesis_graphql._strategies.oracle import build_oracle, min_depths, selectable_fields
@@ -67,3 +69,33 @@ def test_build_oracle_is_cached_per_schema_and_roots():
     first = build_oracle(s, frozenset({"Query"}), target_size=3.0)
     second = build_oracle(s, frozenset({"Query"}), target_size=3.0)
     assert first is second
+
+
+def test_build_oracle_resolves_target_size_on_slowly_converging_schema():
+    s = schema("type Query { next: Mid } type Mid { next: Tree } type Tree { id: ID left: Tree right: Tree }")
+
+    def root_value(x):
+        # Least root of `u = 1 + x * (tree - 1)` where `tree = (1 + x) * u ** 2`; `Query = 1 + x * (u - 1)`
+        u = (1 - math.sqrt(1 - 4 * x * (1 + x) * (1 - x))) / (2 * x * (1 + x))
+        return 1 + x * (u - 1)
+
+    def size(x):
+        h = x * 1e-4
+        return x * (math.log(root_value(x + h)) - math.log(root_value(x - h))) / (2 * h)
+
+    oracle = build_oracle(s, frozenset({"Query"}), target_size=8.0)
+    # The fixpoint needs several thousand sweeps this close to the singularity
+    assert size(oracle.x) < 8.0 <= size(oracle.x + 2**-19)
+    assert abs(oracle.y["Query"] - root_value(oracle.x)) < 1e-9
+
+
+def test_build_oracle_on_densely_self_recursive_type():
+    s = schema("type Query { a: Int b: Query c: Query d: Query e: Query f: Query }")
+    oracle = build_oracle(s, frozenset({"Query"}), target_size=8.0)
+    x, y = oracle.x, oracle.y["Query"]
+    composite = 1 + x * (y - 1)
+    assert y > 1.0
+    assert abs(y - (1 + x) * composite**5) < 1e-8
+    # Expected selection size, from differentiating the fixpoint equation
+    size = (x / (1 + x) + 5 * x * (y - 1) / composite) / (1 - 5 * x * y / composite)
+    assert 7.0 < size < 8.0
