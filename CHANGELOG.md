@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- `hypothesis_graphql.scalars.COMMON_SCALARS` with strategies for `Date`, `DateTime`, `Time`, `UUID`, `JSON`, `JSONObject`, `Long`, `BigInt`, `Decimal`, `EmailAddress` and `URL`.
+
 ## [0.13.7] - 2026-11-21
 
 ### Fixed

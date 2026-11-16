@@ -128,6 +128,22 @@ def test_graphql(query):
 
 Without a strategy, `hypothesis-graphql` skips optional arguments of that type and raises `hypothesis.errors.InvalidArgument` if a required argument uses it.
 
+`hypothesis_graphql.scalars.COMMON_SCALARS` maps widespread scalar names to strategies: `Date`, `DateTime`, `Time`, `UUID`, `JSON`, `JSONObject`, `Long`, `BigInt`, `Decimal`, `EmailAddress` and `URL`.
+Dates and times follow RFC 3339 in UTC (`2000-01-01T00:00:00Z`).
+Pass the mapping as is, or add your own scalars to it:
+
+```python
+from hypothesis import strategies as st, given
+from hypothesis_graphql import from_schema, nodes
+from hypothesis_graphql.scalars import COMMON_SCALARS
+
+custom_scalars = {**COMMON_SCALARS, "Color": st.sampled_from(["#fff", "#000"]).map(nodes.String)}
+
+
+@given(from_schema(SCHEMA, custom_scalars=custom_scalars))
+def test_graphql(query): ...
+```
+
 `hypothesis_graphql.nodes` has helpers that build value nodes:
 
 - `String` -> `graphql.StringValueNode` (converts the value with `str()`)
