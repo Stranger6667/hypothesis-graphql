@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Performance
+
+- Up to ~2.8x faster generation by reusing strategies for field selection and arguments across examples.
+
 ## [0.13.6] - 2026-10-28
 
 ### Added

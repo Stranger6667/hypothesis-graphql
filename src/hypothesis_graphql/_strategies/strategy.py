@@ -164,31 +164,28 @@ class GraphQLStrategy:
             )
         ).map(list)
 
+    @instance_cache(lambda arguments: tuple((name, id(argument)) for name, argument in arguments.items()))
     def list_of_arguments(
         self, arguments: dict[str, graphql.GraphQLArgument]
     ) -> st.SearchStrategy[list[graphql.ArgumentNode]]:
         """Generate a list `graphql.ArgumentNode` for a field."""
         if not arguments:
             return st.just([])
-
-        @st.composite
-        def inner(draw: st.DrawFn) -> list[graphql.ArgumentNode]:
-            args = []
-            for name, argument in arguments.items():
-                default = argument.ast_node.default_value if argument.ast_node is not None else None
-                try:
-                    argument_strategy = self.values(argument.type, default=default)
-                except InvalidArgument:
-                    if not isinstance(argument.type, graphql.GraphQLNonNull):
-                        # If the type is nullable, then either generate `null` or skip it completely
-                        if draw(st.booleans()):
-                            args.append(graphql.ArgumentNode(name=graphql.NameNode(value=name), value=nodes.Null))
-                        continue
+        strategies: list[st.SearchStrategy[graphql.ArgumentNode | None]] = []
+        for name, argument in arguments.items():
+            default = argument.ast_node.default_value if argument.ast_node is not None else None
+            try:
+                strategies.append(self.values(argument.type, default=default).map(factories.argument(name)))
+            except InvalidArgument:
+                if isinstance(argument.type, graphql.GraphQLNonNull):
                     raise
-                args.append(draw(argument_strategy.map(factories.argument(name))))
-            return args
+                # If the type is nullable, then either generate `null` or skip it completely
+                strategies.append(st.booleans().map(factories.null_or_missing_argument(name)))
+        return st.tuples(*strategies).map(_present)
 
-        return inner()
+
+def _present(arguments: tuple[graphql.ArgumentNode | None, ...]) -> list[graphql.ArgumentNode]:
+    return [argument for argument in arguments if argument is not None]
 
 
 def check_nullable(type_: graphql.GraphQLInputType) -> tuple[graphql.GraphQLInputType, bool]:

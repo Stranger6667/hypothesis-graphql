@@ -11,3 +11,7 @@ def test_weighted_boolean_is_bool(value):
 
 def test_weighted_boolean_shrinks_to_false():
     assert find(weighted_boolean(0.99), lambda b: True) is False
+
+
+def test_weighted_boolean_is_reused():
+    assert weighted_boolean(0.25) is weighted_boolean(0.25)
