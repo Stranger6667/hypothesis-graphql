@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- `covering_operations` for a fixed list of operations that use every reachable field and argument.
+
 ### Fixed
 
 - `ValueError` on types with many fields that return the type itself.

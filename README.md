@@ -141,6 +141,31 @@ Without a strategy, `hypothesis-graphql` skips optional arguments of that type a
 
 Use them in `map` calls: `graphql.StringValueNode` and friends accept keyword arguments only.
 
+### Covering every field
+
+Random generation gives no guarantee that a given field shows up.
+`covering_operations` yields `graphql.DocumentNode` objects in a stable order: small valid operations that together use every field and argument reachable from `Query` and `Mutation` at least once:
+
+```python
+import graphql
+import requests
+from hypothesis_graphql import covering_operations
+
+for document in covering_operations(SCHEMA):
+    # { getBooks { title } getAuthors { name } }
+    # { getBooks { title author { name } } }
+    # { getAuthors { name books { title } } }
+    # mutation { addBook(title: "", author: "") { title } }
+    # mutation { addAuthor(name: "") { name } }
+    response = requests.post("http://127.0.0.1/graphql", json={"query": graphql.print_ast(document)})
+    assert response.json().get("errors") is None
+```
+
+Arguments get the smallest value of their type (`0`, `""`, `false`, the first enum value, an empty list) or their declared default.
+Each mutation document calls one root field.
+`fields` limits root fields as in `from_schema`.
+It skips fields that require a custom scalar: it has no value to send for one and takes no `custom_scalars`.
+
 ### Negative Testing
 
 Pass `mode=Mode.NEGATIVE` to generate operations your server must reject:
