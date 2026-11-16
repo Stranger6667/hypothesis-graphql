@@ -7,10 +7,12 @@ from hypothesis import strategies as st
 
 from ..types import CustomScalarStrategies
 from .builder import SelectionNode
-from .oracle import Selectable, build_oracle, is_leaf, min_depths, selectable_fields, unwrap
+from .oracle import build_oracle, is_leaf, min_depths, selectable_fields, unwrap
 from .strategy import GraphQLStrategy
 from .weighted import weighted_boolean
 
+# (name, field, on_type, target, target is a leaf, inclusion strategy)
+Entry = tuple[str, graphql.GraphQLField, str | None, graphql.GraphQLNamedType, bool, st.SearchStrategy[bool]]
 MAX_DEPTH = 8
 MAX_FIELDS = 60
 
@@ -34,47 +36,45 @@ def positive_selection(
         md = depths.get(target.name)
         return md is not None and depth + md <= MAX_DEPTH
 
-    def fields_at(type_: graphql.GraphQLNamedType, depth: int) -> list[Selectable]:
-        items = selectable_fields(schema, type_)
-        if depth == 0 and allowed_root is not None:
-            items = [item for item in items if item[0] in allowed_root]
-        return items
+    plans: dict[str, list[Entry]] = {}
+
+    def plan_for(type_: graphql.GraphQLNamedType) -> list[Entry]:
+        plan = plans.get(type_.name)
+        if plan is None:
+            probs = oracle.inclusion_probabilities(type_.name)
+            plan = plans[type_.name] = []
+            for name, field, on_type in selectable_fields(schema, type_):
+                target = unwrap(field.type)
+                plan.append((name, field, on_type, target, is_leaf(target), weighted_boolean(probs[(name, on_type)])))
+        return plan
 
     @st.composite
     def _generate(draw: st.DrawFn) -> list[SelectionNode]:
         counter = [0]
 
         def select(type_: graphql.GraphQLNamedType, depth: int) -> list[SelectionNode]:
-            probs = oracle.inclusion_probabilities(type_.name)
-            chosen: list[Selectable] = []
-            for name, field, on_type in fields_at(type_, depth):
-                target = unwrap(field.type)
-                if not is_leaf(target) and not ok_composite(target, depth):
-                    continue
+            plan = plan_for(type_)
+            if depth == 0 and allowed_root is not None:
+                plan = [entry for entry in plan if entry[0] in allowed_root]
+            plan = [entry for entry in plan if entry[4] or ok_composite(entry[3], depth)]
+            chosen: list[Entry] = []
+            for entry in plan:
                 # Breadth cap for rare heavy-tail draws.
                 if counter[0] >= MAX_FIELDS:  # pragma: no cover
                     break
-                if draw(weighted_boolean(probs[(name, on_type)])):
-                    chosen.append((name, field, on_type))
+                if draw(entry[5]):
+                    chosen.append(entry)
                     counter[0] += 1
             if not chosen:
-                valid: list[Selectable] = []
-                for name, field, on_type in fields_at(type_, depth):
-                    target = unwrap(field.type)
-                    if is_leaf(target):
-                        # Leaves first so force-one shrinks toward a shallow query.
-                        valid.insert(0, (name, field, on_type))
-                    elif ok_composite(target, depth):
-                        valid.append((name, field, on_type))
                 # Only when no field reaches a leaf within MAX_DEPTH.
-                if not valid:  # pragma: no cover
+                if not plan:  # pragma: no cover
                     return []
-                chosen = [valid[0]]
+                # Leaves first so force-one shrinks toward a shallow query.
+                chosen = [next((entry for entry in reversed(plan) if entry[4]), plan[0])]
                 counter[0] += 1
             nodes: list[SelectionNode] = []
-            for name, field, on_type in chosen:
-                target = unwrap(field.type)
-                children = [] if is_leaf(target) else select(target, depth + 1)
+            for name, field, on_type, target, leaf, _ in chosen:
+                children = [] if leaf else select(target, depth + 1)
                 args = draw(gql.list_of_arguments(field.args))
                 nodes.append((name, on_type, children, args))
             return nodes
