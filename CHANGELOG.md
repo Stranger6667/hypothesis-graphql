@@ -5,6 +5,7 @@
 ### Performance
 
 - Up to ~2.8x faster generation by reusing strategies for field selection and arguments across examples.
+- Up to 1.3x faster `NEGATIVE` mode generation on schemas with input objects.
 
 ## [0.13.6] - 2026-10-28
 
