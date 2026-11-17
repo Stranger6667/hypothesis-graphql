@@ -96,6 +96,22 @@ def test_graphql(query):
 
 Set `allow_null=False` to keep `null` out of argument values, including nested input fields and list items.
 
+Set `syntax_variety=True` to add field aliases, `@skip` / `@include` directives, an operation name and named fragments to about half of the operations:
+
+```graphql
+query a {
+  b: getAuthors @include(if: true) {
+    ...c
+  }
+}
+
+fragment c on Author {
+  name
+}
+```
+
+A field under `@skip(if: true)` or `@include(if: false)` never reaches its resolver.
+
 Built-in scalars (`Int`, `Float`, `String`, `ID`, `Boolean`) work out of the box.
 For a custom scalar such as `Date`, pass a strategy that generates AST nodes for it:
 
@@ -179,6 +195,7 @@ def test_server_rejects_invalid_queries(query):
 ```
 
 `queries`, `mutations`, and `from_schema` all accept `mode`.
+Negative mode ignores `syntax_variety`.
 If no argument in the schema allows any of these violations, negative mode raises `InvalidArgument`.
 
 ## License
