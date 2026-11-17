@@ -8,8 +8,6 @@ from ._schemas import SCHEMAS, custom_scalars_for
 
 POSITIVE_EXAMPLES = 5
 NEGATIVE_EXAMPLES = 3
-GENERATE_SKIP = {"large"}
-NEGATIVE_SKIP = GENERATE_SKIP | {"recursive", "input-heavy"}
 
 
 @pytest.fixture(scope="module")
@@ -23,14 +21,25 @@ def test_parse(benchmark, label):
     benchmark(graphql.build_schema, sdl)
 
 
-@pytest.mark.parametrize("label", [label for label in SCHEMAS if label not in GENERATE_SKIP])
+@pytest.mark.parametrize("label", list(SCHEMAS))
+def test_build(benchmark, prepared, label):
+    sdl, custom_scalars = prepared[label]
+
+    def setup():
+        # A new schema object per round, as strategies are cached per schema
+        return (graphql.build_schema(sdl),), {"custom_scalars": custom_scalars}
+
+    benchmark.pedantic(from_schema, setup=setup)
+
+
+@pytest.mark.parametrize("label", list(SCHEMAS))
 def test_generate_positive(benchmark, prepared, label):
     sdl, custom_scalars = prepared[label]
     strategy = from_schema(sdl, custom_scalars=custom_scalars)
     benchmark(drive, strategy, POSITIVE_EXAMPLES)
 
 
-@pytest.mark.parametrize("label", [label for label in SCHEMAS if label not in NEGATIVE_SKIP])
+@pytest.mark.parametrize("label", list(SCHEMAS))
 def test_generate_negative(benchmark, prepared, label):
     sdl, custom_scalars = prepared[label]
     strategy = from_schema(sdl, custom_scalars=custom_scalars, mode=Mode.NEGATIVE)
