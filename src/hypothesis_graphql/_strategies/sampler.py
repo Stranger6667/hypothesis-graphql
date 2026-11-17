@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from operator import itemgetter
 
 import graphql
 from hypothesis import strategies as st
+from hypothesis.errors import InvalidArgument
 
 from ..types import CustomScalarStrategies
 from .builder import SelectionNode
@@ -11,10 +13,8 @@ from .oracle import build_oracle, is_leaf, min_depths, selectable_fields, unwrap
 from .strategy import GraphQLStrategy
 from .weighted import weighted_boolean
 
-# (name, field, on_type, target, target is a leaf, inclusion strategy)
-Entry = tuple[str, graphql.GraphQLField, str | None, graphql.GraphQLNamedType, bool, st.SearchStrategy[bool]]
-MAX_DEPTH = 8
-MAX_FIELDS = 60
+# (name, field, on_type, target, target is a leaf, inclusion strategy, fewest fields the entry adds)
+Entry = tuple[str, graphql.GraphQLField, str | None, graphql.GraphQLNamedType, bool, st.SearchStrategy[bool], int]
 
 
 def positive_selection(
@@ -24,17 +24,15 @@ def positive_selection(
     custom_scalars: CustomScalarStrategies | None = None,
     allow_null: bool = True,
     fields: Sequence[str] | None = None,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[list[SelectionNode]]:
     depths = min_depths(schema)
     # Adaptive expected size: richer queries on larger schemas so big graphs are not under-explored.
-    target_size = max(8.0, min(40.0, len(depths) * 0.4))
+    # Kept below `max_fields`, otherwise most draws hit the cap and drop the fields declared last.
+    target_size = min(max(8.0, min(40.0, len(depths) * 0.4)), max_fields * 2 / 3)
     oracle = build_oracle(schema, frozenset({root.name}), target_size=target_size)
     gql = GraphQLStrategy(schema=schema, alphabet=alphabet, custom_scalars=custom_scalars or {}, allow_null=allow_null)
-    allowed_root = set(fields) if fields else None
-
-    def ok_composite(target: graphql.GraphQLNamedType, depth: int) -> bool:
-        md = depths.get(target.name)
-        return md is not None and depth + md <= MAX_DEPTH
 
     plans: dict[str, list[Entry]] = {}
 
@@ -45,40 +43,54 @@ def positive_selection(
             plan = plans[type_.name] = []
             for name, field, on_type in selectable_fields(schema, type_):
                 target = unwrap(field.type)
-                plan.append((name, field, on_type, target, is_leaf(target), weighted_boolean(probs[(name, on_type)])))
+                leaf = is_leaf(target)
+                # The shortest chain down to a leaf has one field per level
+                below = 0 if leaf else depths.get(target.name)
+                if below is not None:
+                    plan.append(
+                        (name, field, on_type, target, leaf, weighted_boolean(probs[(name, on_type)]), below + 1)
+                    )
         return plan
+
+    root_plan = plan_for(root)
+    if fields:
+        allowed_root = set(fields)
+        root_plan = [entry for entry in root_plan if entry[0] in allowed_root]
+    smallest = min((entry[6] for entry in root_plan), default=1)
+    if max_depth < smallest:
+        raise InvalidArgument(f"`max_depth={max_depth}` is too small: the shallowest query needs a depth of {smallest}")
+    if max_fields < smallest:
+        raise InvalidArgument(f"`max_fields={max_fields}` is too small: the smallest query needs {smallest} fields")
 
     @st.composite
     def _generate(draw: st.DrawFn) -> list[SelectionNode]:
-        counter = [0]
+        # Fields left to hand out; every chosen entry takes its fewest-fields cost up front
+        budget = max_fields
 
-        def select(type_: graphql.GraphQLNamedType, depth: int) -> list[SelectionNode]:
-            plan = plan_for(type_)
-            if depth == 0 and allowed_root is not None:
-                plan = [entry for entry in plan if entry[0] in allowed_root]
-            plan = [entry for entry in plan if entry[4] or ok_composite(entry[3], depth)]
+        def select(plan: list[Entry], depth: int, reserved: int) -> list[SelectionNode]:
+            nonlocal budget
+            budget += reserved
             chosen: list[Entry] = []
             for entry in plan:
-                # Breadth cap for rare heavy-tail draws.
-                if counter[0] >= MAX_FIELDS:  # pragma: no cover
-                    break
-                if draw(entry[5]):
+                cost = entry[6]
+                if cost <= budget and depth + cost <= max_depth and draw(entry[5]):
                     chosen.append(entry)
-                    counter[0] += 1
+                    budget -= cost
             if not chosen:
-                # Only when no field reaches a leaf within MAX_DEPTH.
+                # Only when no field reaches a leaf.
                 if not plan:  # pragma: no cover
                     return []
-                # Leaves first so force-one shrinks toward a shallow query.
-                chosen = [next((entry for entry in reversed(plan) if entry[4]), plan[0])]
-                counter[0] += 1
+                # Leaves first so force-one shrinks toward a shallow query; the cheapest entry always fits.
+                forced = next((entry for entry in reversed(plan) if entry[4]), None) or min(plan, key=itemgetter(6))
+                chosen.append(forced)
+                budget -= forced[6]
             nodes: list[SelectionNode] = []
-            for name, field, on_type, target, leaf, _ in chosen:
-                children = [] if leaf else select(target, depth + 1)
+            for name, field, on_type, target, leaf, _, cost in chosen:
+                children = [] if leaf else select(plan_for(target), depth + 1, cost - 1)
                 args = draw(gql.list_of_arguments(field.args))
                 nodes.append((name, on_type, children, args))
             return nodes
 
-        return select(root, 0)
+        return select(root_plan, 0, 0)
 
     return _generate()

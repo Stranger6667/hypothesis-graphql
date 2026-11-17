@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- `max_depth` and `max_fields` arguments to limit the size of generated operations.
+
 ## [0.13.7] - 2026-11-21
 
 ### Fixed

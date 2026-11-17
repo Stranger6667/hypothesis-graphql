@@ -254,6 +254,8 @@ def _make_strategy(
     alphabet: st.SearchStrategy[str],
     allow_null: bool = True,
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[SelectionNodes]:
     """Create strategy for GraphQL selections (query/mutation fields)."""
     from .builder import build_selection_set
@@ -265,6 +267,9 @@ def _make_strategy(
         validation.validate_fields(fields, list(type_.fields))
     if custom_scalars:
         validation.validate_custom_scalars(custom_scalars)
+    for name, value in (("max_depth", max_depth), ("max_fields", max_fields)):
+        if value < 1:
+            raise InvalidArgument(f"`{name}` must be at least 1, got {value}")
 
     if mode == Mode.NEGATIVE:
         selection = negative_selection(
@@ -272,7 +277,14 @@ def _make_strategy(
         )
     else:
         selection = positive_selection(
-            schema, type_, alphabet, custom_scalars=custom_scalars or {}, allow_null=allow_null, fields=fields
+            schema,
+            type_,
+            alphabet,
+            custom_scalars=custom_scalars or {},
+            allow_null=allow_null,
+            fields=fields,
+            max_depth=max_depth,
+            max_fields=max_fields,
         )
     return selection.map(lambda sel_nodes: build_selection_set(sel_nodes, type_map=schema.type_map).selections)
 
@@ -293,6 +305,8 @@ def queries(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[str]: ...
 
 
@@ -307,6 +321,8 @@ def queries(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[T]: ...
 
 
@@ -321,6 +337,8 @@ def queries(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[object]:
     r"""Generate queries for a GraphQL schema.
 
@@ -334,6 +352,8 @@ def queries(
     :param allow_null: Allow `null` in argument values, including nested ones.
     :param codec: Generate only characters this codec can encode. `None` allows any character.
     :param mode: `Mode.POSITIVE` for valid queries, `Mode.NEGATIVE` for queries with one schema violation.
+    :param max_depth: Deepest field nesting of a query. Ignored in `Mode.NEGATIVE`.
+    :param max_fields: Most field selections in a query. Ignored in `Mode.NEGATIVE`.
     :raises InvalidArgument: If the schema has no `Query` type.
     :raises ValueError: If `fields` is empty or names a field that `Query` does not define.
     """
@@ -351,6 +371,8 @@ def queries(
             alphabet=alphabet,
             allow_null=allow_null,
             mode=mode,
+            max_depth=max_depth,
+            max_fields=max_fields,
         )
         .map(make_query)
         .map(print_ast)
@@ -367,6 +389,8 @@ def mutations(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[str]: ...
 
 
@@ -381,6 +405,8 @@ def mutations(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[T]: ...
 
 
@@ -395,6 +421,8 @@ def mutations(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[object]:
     r"""Generate mutations for a GraphQL schema.
 
@@ -408,6 +436,8 @@ def mutations(
     :param allow_null: Allow `null` in argument values, including nested ones.
     :param codec: Generate only characters this codec can encode. `None` allows any character.
     :param mode: `Mode.POSITIVE` for valid mutations, `Mode.NEGATIVE` for mutations with one schema violation.
+    :param max_depth: Deepest field nesting of a mutation. Ignored in `Mode.NEGATIVE`.
+    :param max_fields: Most field selections in a mutation. Ignored in `Mode.NEGATIVE`.
     :raises InvalidArgument: If the schema has no `Mutation` type.
     :raises ValueError: If `fields` is empty or names a field that `Mutation` does not define.
     """
@@ -425,6 +455,8 @@ def mutations(
             alphabet=alphabet,
             allow_null=allow_null,
             mode=mode,
+            max_depth=max_depth,
+            max_fields=max_fields,
         )
         .map(make_mutation)
         .map(print_ast)
@@ -441,6 +473,8 @@ def from_schema(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[str]: ...
 
 
@@ -455,6 +489,8 @@ def from_schema(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[T]: ...
 
 
@@ -469,6 +505,8 @@ def from_schema(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    max_depth: int = 9,
+    max_fields: int = 60,
 ) -> st.SearchStrategy[object]:
     r"""Generate queries and mutations for a GraphQL schema.
 
@@ -482,6 +520,8 @@ def from_schema(
     :param allow_null: Allow `null` in argument values, including nested ones.
     :param codec: Generate only characters this codec can encode. `None` allows any character.
     :param mode: `Mode.POSITIVE` for valid operations, `Mode.NEGATIVE` for operations with one schema violation.
+    :param max_depth: Deepest field nesting of an operation. Ignored in `Mode.NEGATIVE`.
+    :param max_fields: Most field selections in an operation. Ignored in `Mode.NEGATIVE`.
     :raises InvalidArgument: If the schema has neither a `Query` nor a `Mutation` type.
     :raises ValueError: If `fields` is empty or names a field that neither root type defines.
     """
@@ -526,6 +566,8 @@ def from_schema(
                 alphabet=alphabet,
                 allow_null=allow_null,
                 mode=mode,
+                max_depth=max_depth,
+                max_fields=max_fields,
             )
             .map(node_factory)
             .map(print_ast)

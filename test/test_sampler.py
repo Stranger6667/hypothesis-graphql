@@ -1,6 +1,11 @@
 import graphql
+import pytest
 from hypothesis import HealthCheck, Phase, given, settings
 from hypothesis import strategies as st
+from hypothesis.errors import InvalidArgument
+
+from benchmarks._schemas import SCHEMAS, custom_scalars_for
+from hypothesis_graphql import Mode, from_schema, mutations, queries
 
 from hypothesis_graphql._strategies.ast import make_query
 from hypothesis_graphql._strategies.builder import build_selection_set
@@ -67,3 +72,100 @@ def test_schema_is_walked_once_per_type(monkeypatch):
 
     run()
     assert sorted(calls) == ["Node", "Query"]
+
+
+def _measure(selection_set):
+    # (deepest field nesting, number of field selections)
+    depth = count = 0
+    for selection in selection_set.selections:
+        inner_depth, inner_count = _measure(selection.selection_set) if selection.selection_set else (0, 0)
+        if isinstance(selection, graphql.FieldNode):
+            inner_depth += 1
+            count += 1
+        depth = max(depth, inner_depth)
+        count += inner_count
+    return depth, count
+
+
+def _sizes(strategy, examples=100):
+    sizes = []
+
+    @given(strategy)
+    @settings(max_examples=examples, suppress_health_check=list(HealthCheck), deadline=None, phases=[Phase.generate])
+    def run(query):
+        sizes.append(_measure(graphql.parse(query).definitions[0].selection_set))
+
+    run()
+    return sizes
+
+
+@pytest.mark.parametrize("label", ["recursive", "interface-union"])
+@pytest.mark.parametrize(
+    ("max_depth", "max_fields"), [(2, 2), (2, 60), (3, 5), (5, 10), (8, 3), (8, 60), (12, 100), (30, 1000)]
+)
+def test_size_limits(label, max_depth, max_fields):
+    sdl = SCHEMAS[label]
+    strategy = from_schema(sdl, custom_scalars=custom_scalars_for(sdl), max_depth=max_depth, max_fields=max_fields)
+    for depth, count in _sizes(strategy):
+        assert 1 <= depth <= max_depth
+        assert depth <= count <= max_fields
+
+
+@pytest.mark.parametrize("max_depth", [2, 3, 4])
+def test_max_depth_is_reachable(max_depth):
+    sizes = _sizes(queries(SCHEMA, max_depth=max_depth), examples=300)
+    assert max(depth for depth, _ in sizes) == max_depth
+
+
+@pytest.mark.parametrize("max_fields", [2, 4, 7])
+def test_max_fields_is_reachable(max_fields):
+    sizes = _sizes(queries(SCHEMA, max_fields=max_fields), examples=300)
+    assert max(count for _, count in sizes) == max_fields
+
+
+@pytest.mark.parametrize("factory", [queries, from_schema])
+@pytest.mark.parametrize("kwargs", [{"max_depth": 0}, {"max_fields": 0}, {"max_depth": -1}])
+def test_size_limits_below_one(factory, kwargs):
+    with pytest.raises(InvalidArgument, match="must be at least 1"):
+        factory(SCHEMA, **kwargs)
+    with pytest.raises(InvalidArgument, match="must be at least 1"):
+        factory(SCHEMA, mode=Mode.NEGATIVE, **kwargs)
+
+
+DEEP = "type Query { a: A x: X } type A { b: B } type B { id: ID } type X { id: ID } type Mutation { m: A }"
+
+
+@pytest.mark.parametrize(
+    ("factory", "kwargs", "message"),
+    [
+        (queries, {"max_depth": 1}, "`max_depth=1` is too small: the shallowest query needs a depth of 2"),
+        (queries, {"max_fields": 1}, "`max_fields=1` is too small: the smallest query needs 2 fields"),
+        (
+            queries,
+            {"max_depth": 2, "fields": ["a"]},
+            "`max_depth=2` is too small: the shallowest query needs a depth of 3",
+        ),
+        (mutations, {"max_fields": 2}, "`max_fields=2` is too small: the smallest query needs 3 fields"),
+        (from_schema, {"max_depth": 2}, "`max_depth=2` is too small: the shallowest query needs a depth of 3"),
+    ],
+)
+def test_size_limits_below_schema_minimum(factory, kwargs, message):
+    with pytest.raises(InvalidArgument, match=message):
+        factory(DEEP, **kwargs)
+
+
+def test_size_limits_at_schema_minimum():
+    assert set(_sizes(queries(DEEP, max_depth=3, max_fields=3, fields=["a"]), examples=20)) == {(3, 3)}
+    assert set(_sizes(queries(DEEP, max_depth=2, max_fields=2), examples=20)) == {(2, 2)}
+
+
+def test_negative_mode_ignores_size_limits():
+    schema = "type Query { a(x: Int!): A } type A { b: B } type B { id: ID }"
+    with pytest.raises(InvalidArgument):
+        queries(schema, max_depth=1, max_fields=1)
+    assert _sizes(queries(schema, mode=Mode.NEGATIVE, max_depth=1, max_fields=1), examples=20)
+
+
+def test_fields_without_leaves_are_never_selected():
+    schema = "type Query { a: A x: Int } type A { a: A }"
+    assert set(_sizes(queries(schema), examples=30)) == {(1, 1)}
