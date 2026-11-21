@@ -96,6 +96,16 @@ def test_graphql(query):
 
 Set `allow_null=False` to keep `null` out of argument values, including nested input fields and list items.
 
+Servers with depth or complexity limits reject large queries before running them.
+`max_depth` (default `9`) caps field nesting, where a root field is level 1, and `max_fields` (default `60`) caps the number of selected fields:
+
+```python
+@given(from_schema(SCHEMA, max_depth=3, max_fields=10))
+def test_graphql(query): ...
+```
+
+Both raise `hypothesis.errors.InvalidArgument` when the schema has no query that small.
+
 Built-in scalars (`Int`, `Float`, `String`, `ID`, `Boolean`) work out of the box.
 For a custom scalar such as `Date`, pass a strategy that generates AST nodes for it:
 
@@ -179,6 +189,7 @@ def test_server_rejects_invalid_queries(query):
 ```
 
 `queries`, `mutations`, and `from_schema` all accept `mode`.
+Negative mode ignores `max_depth` and `max_fields`.
 If no argument in the schema allows any of these violations, negative mode raises `InvalidArgument`.
 
 ## License
