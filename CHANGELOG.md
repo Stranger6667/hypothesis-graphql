@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- `extract_variables` to move argument literals into operation variables.
+
 ## [0.13.7] - 2026-11-21
 
 ### Fixed

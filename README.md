@@ -141,6 +141,41 @@ Without a strategy, `hypothesis-graphql` skips optional arguments of that type a
 
 Use them in `map` calls: `graphql.StringValueNode` and friends accept keyword arguments only.
 
+### Variables
+
+Generated operations carry argument values inline.
+`extract_variables` moves them into variables, the way most clients send them, so your server also runs its variable coercion:
+
+```python
+import graphql
+import requests
+from hypothesis import given
+from hypothesis_graphql import extract_variables, from_schema
+
+# `extract_variables` needs a `graphql.GraphQLSchema`, not a string
+schema = graphql.build_schema(SCHEMA)
+
+
+# `print_ast` turns each generated `graphql.DocumentNode` into the test argument, a string by default.
+# Return the document as is to keep it for `extract_variables`
+@given(from_schema(schema, print_ast=lambda document: document))
+def test_graphql(document):
+    document, variables = extract_variables(document, schema)
+    # mutation ($title: String!, $author: String!) {
+    #   addBook(title: $title, author: $author) {
+    #     title
+    #   }
+    # }
+    #
+    # {"title": "H4Z\u7869", "author": "\u00d2"}
+    payload = {"query": graphql.print_ast(document), "variables": variables}
+    response = requests.post("http://127.0.0.1/graphql", json=payload)
+    assert response.json().get("errors") is None
+```
+
+`variables` holds plain JSON values.
+Directive arguments stay inline.
+
 ### Negative Testing
 
 Pass `mode=Mode.NEGATIVE` to generate operations your server must reject:
