@@ -1,6 +1,6 @@
 import graphql
 
-from hypothesis_graphql._strategies.builder import build_selection_set
+from hypothesis_graphql._strategies.builder import build_document, build_selection_set
 
 # SelectionNode = (field_name, on_type, children: list, args: list)
 
@@ -16,3 +16,10 @@ def test_build_aliases_conflicting_fragment_fields():
     nodes = [("x", "A", [], []), ("x", "B", [], [])]
     printed = graphql.print_ast(build_selection_set(nodes, type_map=s.type_map))
     assert "... on A" in printed and "... on B" in printed and "x_String" in printed
+
+
+def test_build_plain_document():
+    s = graphql.build_schema("type Query { a: A } type A { b: Int }")
+    document = build_document([("a", None, [("b", None, [], [])], [])], graphql.OperationType.QUERY, s.type_map)
+    assert graphql.print_ast(document).strip() == "{\n  a {\n    b\n  }\n}"
+    assert graphql.validate(s, document) == []

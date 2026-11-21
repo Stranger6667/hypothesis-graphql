@@ -16,10 +16,8 @@ from .. import nodes
 from ..types import (
     CustomScalarStrategies,
     Field,
-    SelectionNodes,
 )
 from . import factories, primitives, validation
-from .ast import make_mutation, make_query
 from .mode import Mode
 
 T = TypeVar("T")
@@ -249,14 +247,16 @@ def _make_strategy(
     schema: graphql.GraphQLSchema,
     *,
     type_: graphql.GraphQLObjectType,
+    kind: graphql.OperationType,
     fields: Iterable[str] | None = None,
     custom_scalars: CustomScalarStrategies | None = None,
     alphabet: st.SearchStrategy[str],
     allow_null: bool = True,
     mode: Mode = Mode.POSITIVE,
-) -> st.SearchStrategy[SelectionNodes]:
-    """Create strategy for GraphQL selections (query/mutation fields)."""
-    from .builder import build_selection_set
+    syntax_variety: bool = False,
+) -> st.SearchStrategy[graphql.DocumentNode]:
+    """Create strategy for GraphQL documents with one operation on the given root type."""
+    from .builder import Documents, build_document
     from .negative_sites import negative_selection
     from .sampler import positive_selection
 
@@ -274,7 +274,10 @@ def _make_strategy(
         selection = positive_selection(
             schema, type_, alphabet, custom_scalars=custom_scalars or {}, allow_null=allow_null, fields=fields
         )
-    return selection.map(lambda sel_nodes: build_selection_set(sel_nodes, type_map=schema.type_map).selections)
+    type_map = schema.type_map
+    if syntax_variety and mode == Mode.POSITIVE:
+        return Documents(selection, kind, type_.name, type_map)
+    return selection.map(lambda selected: build_document(selected, kind, type_map))
 
 
 def _build_alphabet(allow_x00: bool = True, codec: str | None = "utf-8") -> st.SearchStrategy[str]:
@@ -293,6 +296,7 @@ def queries(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    syntax_variety: bool = False,
 ) -> st.SearchStrategy[str]: ...
 
 
@@ -307,6 +311,7 @@ def queries(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    syntax_variety: bool = False,
 ) -> st.SearchStrategy[T]: ...
 
 
@@ -321,6 +326,7 @@ def queries(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    syntax_variety: bool = False,
 ) -> st.SearchStrategy[object]:
     r"""Generate queries for a GraphQL schema.
 
@@ -334,6 +340,8 @@ def queries(
     :param allow_null: Allow `null` in argument values, including nested ones.
     :param codec: Generate only characters this codec can encode. `None` allows any character.
     :param mode: `Mode.POSITIVE` for valid queries, `Mode.NEGATIVE` for queries with one schema violation.
+    :param syntax_variety: Add aliases, `@skip` / `@include`, an operation name and named fragments to about half
+        of the operations. Ignored in `Mode.NEGATIVE`.
     :raises InvalidArgument: If the schema has no `Query` type.
     :raises ValueError: If `fields` is empty or names a field that `Query` does not define.
     """
@@ -342,19 +350,17 @@ def queries(
         raise InvalidArgument("Query type is not defined in the schema")
     alphabet = _build_alphabet(allow_x00=allow_x00, codec=codec)
 
-    return (
-        _make_strategy(
-            parsed_schema,
-            type_=parsed_schema.query_type,
-            fields=fields,
-            custom_scalars=custom_scalars,
-            alphabet=alphabet,
-            allow_null=allow_null,
-            mode=mode,
-        )
-        .map(make_query)
-        .map(print_ast)
-    )
+    return _make_strategy(
+        parsed_schema,
+        type_=parsed_schema.query_type,
+        kind=graphql.OperationType.QUERY,
+        fields=fields,
+        custom_scalars=custom_scalars,
+        alphabet=alphabet,
+        allow_null=allow_null,
+        mode=mode,
+        syntax_variety=syntax_variety,
+    ).map(print_ast)
 
 
 @overload
@@ -367,6 +373,7 @@ def mutations(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    syntax_variety: bool = False,
 ) -> st.SearchStrategy[str]: ...
 
 
@@ -381,6 +388,7 @@ def mutations(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    syntax_variety: bool = False,
 ) -> st.SearchStrategy[T]: ...
 
 
@@ -395,6 +403,7 @@ def mutations(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    syntax_variety: bool = False,
 ) -> st.SearchStrategy[object]:
     r"""Generate mutations for a GraphQL schema.
 
@@ -408,6 +417,8 @@ def mutations(
     :param allow_null: Allow `null` in argument values, including nested ones.
     :param codec: Generate only characters this codec can encode. `None` allows any character.
     :param mode: `Mode.POSITIVE` for valid mutations, `Mode.NEGATIVE` for mutations with one schema violation.
+    :param syntax_variety: Add aliases, `@skip` / `@include`, an operation name and named fragments to about half
+        of the operations. Ignored in `Mode.NEGATIVE`.
     :raises InvalidArgument: If the schema has no `Mutation` type.
     :raises ValueError: If `fields` is empty or names a field that `Mutation` does not define.
     """
@@ -416,19 +427,17 @@ def mutations(
         raise InvalidArgument("Mutation type is not defined in the schema")
     alphabet = _build_alphabet(allow_x00=allow_x00, codec=codec)
 
-    return (
-        _make_strategy(
-            parsed_schema,
-            type_=parsed_schema.mutation_type,
-            fields=fields,
-            custom_scalars=custom_scalars,
-            alphabet=alphabet,
-            allow_null=allow_null,
-            mode=mode,
-        )
-        .map(make_mutation)
-        .map(print_ast)
-    )
+    return _make_strategy(
+        parsed_schema,
+        type_=parsed_schema.mutation_type,
+        kind=graphql.OperationType.MUTATION,
+        fields=fields,
+        custom_scalars=custom_scalars,
+        alphabet=alphabet,
+        allow_null=allow_null,
+        mode=mode,
+        syntax_variety=syntax_variety,
+    ).map(print_ast)
 
 
 @overload
@@ -441,6 +450,7 @@ def from_schema(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    syntax_variety: bool = False,
 ) -> st.SearchStrategy[str]: ...
 
 
@@ -455,6 +465,7 @@ def from_schema(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    syntax_variety: bool = False,
 ) -> st.SearchStrategy[T]: ...
 
 
@@ -469,6 +480,7 @@ def from_schema(
     allow_null: bool = True,
     codec: str | None = "utf-8",
     mode: Mode = Mode.POSITIVE,
+    syntax_variety: bool = False,
 ) -> st.SearchStrategy[object]:
     r"""Generate queries and mutations for a GraphQL schema.
 
@@ -482,6 +494,8 @@ def from_schema(
     :param allow_null: Allow `null` in argument values, including nested ones.
     :param codec: Generate only characters this codec can encode. `None` allows any character.
     :param mode: `Mode.POSITIVE` for valid operations, `Mode.NEGATIVE` for operations with one schema violation.
+    :param syntax_variety: Add aliases, `@skip` / `@include`, an operation name and named fragments to about half
+        of the operations. Ignored in `Mode.NEGATIVE`.
     :raises InvalidArgument: If the schema has neither a `Query` nor a `Mutation` type.
     :raises ValueError: If `fields` is empty or names a field that neither root type defines.
     """
@@ -508,28 +522,26 @@ def from_schema(
 
     # Build strategies for available types (works for both positive and negative mode)
     strategies = []
-    for type_, type_fields, node_factory in (
-        (query, query_fields, make_query),
-        (mutation, mutation_fields, make_mutation),
+    for type_, type_fields, kind in (
+        (query, query_fields, graphql.OperationType.QUERY),
+        (mutation, mutation_fields, graphql.OperationType.MUTATION),
     ):
         # If a type is defined in the schema and doesn't have restrictions on fields or has at least one selected field
         if type_ is None or (type_fields is not None and len(type_fields) == 0):
             continue
 
         # Create strategy using unified _make_strategy (handles both modes)
-        strategy = (
-            _make_strategy(
-                parsed_schema,
-                type_=type_,
-                fields=type_fields,
-                custom_scalars=custom_scalars,
-                alphabet=alphabet,
-                allow_null=allow_null,
-                mode=mode,
-            )
-            .map(node_factory)
-            .map(print_ast)
-        )
+        strategy = _make_strategy(
+            parsed_schema,
+            type_=type_,
+            kind=kind,
+            fields=type_fields,
+            custom_scalars=custom_scalars,
+            alphabet=alphabet,
+            allow_null=allow_null,
+            mode=mode,
+            syntax_variety=syntax_variety,
+        ).map(print_ast)
 
         strategies.append(strategy)
 

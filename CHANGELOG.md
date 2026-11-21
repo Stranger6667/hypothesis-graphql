@@ -2,6 +2,10 @@
 
 ## [Unreleased] - TBD
 
+### Added
+
+- `syntax_variety` argument to generate field aliases, `@skip` / `@include` directives, operation names and named fragments.
+
 ## [0.13.7] - 2026-11-21
 
 ### Fixed
