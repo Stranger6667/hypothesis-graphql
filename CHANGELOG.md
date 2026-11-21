@@ -2,6 +2,8 @@
 
 ## [Unreleased] - TBD
 
+## [0.13.7] - 2026-11-21
+
 ### Fixed
 
 - `ValueError` on types with many fields that return the type itself.
@@ -287,7 +289,8 @@ Invalid queries:
 
 - Initial public release
 
-[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.6...HEAD
+[Unreleased]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.7...HEAD
+[0.13.7]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.6...v0.13.7
 [0.13.6]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.5...v0.13.6
 [0.13.5]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/stranger6667/hypothesis-graphql/compare/v0.13.3...v0.13.4
